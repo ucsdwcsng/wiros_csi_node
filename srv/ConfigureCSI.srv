@@ -1,0 +1,7 @@
+#set these values to -1 to keep the current configuration
+int32 chan
+int32 bw
+#set first element to -1 to keep current configuration
+int32[] mac_filter
+---
+string result

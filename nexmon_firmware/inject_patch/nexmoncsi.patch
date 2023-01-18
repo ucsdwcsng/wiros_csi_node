@@ -1,0 +1,32 @@
+diff --git a/src/ioctl.c b/src/ioctl.c
+index 6fbad1d..6dd608a 100644
+--- a/src/ioctl.c
++++ b/src/ioctl.c
+@@ -201,6 +201,27 @@ wlc_ioctl_hook(struct wlc_info *wlc, int cmd, char *arg, int len, void *wlc_if)
+             }
+                 break;
+         }
++	case 505:
++	{
++                if (wlc->hw->up && len > 1) {
++#define TXOFF 0xca
++			void *p = pkt_buf_get_skb (wlc->osh, len + TXOFF - sizeof(unsigned int));
++			if (!p) {
++				printf ("Cannot get pkt buffer\n");
++			} else {
++				void *frame = skb_pull (p, TXOFF);
++				unsigned int rate = ((unsigned int *) arg) [0];
++				memcpy (frame, &((unsigned int *) arg)[1], len - sizeof (unsigned int));
++				wlc_sendctl (wlc, p, wlc->active_queue, wlc->band->hwrs_scb, 0, rate, 0);
++				ret = IOCTL_SUCCESS;
++				// pkt_buf_free_skb (wlc->osh, p, 0); // not needed
++			}
++			ret = IOCTL_SUCCESS;
++		} else {
++			printf ("interface is down\n");
++		}
++		break;
++	}
+         case NEX_READ_OBJMEM:
+         {
+             set_mpc(wlc, 0);
