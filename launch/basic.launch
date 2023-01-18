@@ -4,7 +4,8 @@
   <node pkg="nexmon_csi_ros" type="csi_node" name="csi_server" output="screen" clear_params="true" required="true">
     
     <!-- LOGIN DETAILS -->
-    <param name="asus_pwd"          type="string"       value="robot123!" />
+    <param name="asus_pwd"          type="string"       value="password" /> <!-- password setup during Asus bringup-->
+
     <param name="asus_ip"           type="string"       value="192.168.43.*" />
     
     <!-- CHANNEL PARAMS -->
@@ -18,7 +19,8 @@
     <!-- beacon rate in ms; with mac address 11:11:11:
                                             "first byte of hostname":
                                             "second byte of hostname":
-                                            "last byte of ip4" -->
+                                            "last byte of ip4"
+         if set to 0, then the AP does not transmit any packets -->
     <param name="beacon_rate"       type="double"       value="0"   />
     
     <!-- SETUP PARAMS -->
@@ -26,8 +28,8 @@
          This may affect packet latency, but needed for older systems which cannot receive the UDP broadcast -->
     <param name="tcp_forward"       type="bool"         value="false"    />
 
-    <!-- Used to make the asus always listen to the nearest AP (will reduce your wifi connectivity somewhat since scanning needs to be done locally) -->
-    <param name="lock_topic"        type="string"       value="/ap_scanner/channels_5" />
+    <!-- Used to make the asus always listen to the nearest AP (will reduce your wifi connectivity somewhat since scanning needs to be done locally), see "Real-Time channel switching" in the README -->
+    <param name="lock_topic"        type="string"       value="PUBLISHTOPIC" />
 
     <!-- Launch the node, but do not configure the router. useful for debug purposes. -->
     <param name="no_config"         type="bool"         value="false"    />

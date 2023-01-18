@@ -22,7 +22,7 @@ TODO: Add picture/cad files
     - Enter the IP address you want the AP to have (e.g. 192.168.43.xxx) . Subnet mask can be 255.255.255.0 and the default gateway and DNS servers can be 0.0.0.0.
     - Tip: We recommend putting all of the APs on the same subnet. If you have a lot of APs in your experiment and don't want to keep track of which computer is connected to which AP, the node can be set to run nmap and automatically detect the IP of the AP it is connected to, assuming the subnet is known beforehand.
     - You can set the network name and password, but this network will not be operational once the Nexmon firmware is flashed. 
-    - We recommend setting the same login and password for all the APs.
+    - Next, setup the login details for the AP. We recommend setting the same login and password for all the APs. This will be later needed to ssh into the AP. 
     - Once you enter these options, the AP will restart.
 	
 	
@@ -83,7 +83,7 @@ On a high level, when you start `csi_node`, it will attempt to log into the AP a
 
 An example launch script is located in the `launch` folder and can be launched with:
 ```
-roslaunch nexmon_csi_ros asus.launch
+roslaunch nexmon_csi_ros basic.launch
 ```
 You should copy this script and modify the parameters to suit your needs.
 
@@ -112,7 +112,8 @@ The list can be 0-6 bytes. The first two bytes are filtered for in hardware on t
 ***setup params***
 
 - `tcp_forward` : Forward the packets over TCP instead of directly bridging over ethernet. By default, the bcm4366c0 sends CSI data to the linux kernel running on the AP via udp broadcast packets. We forward these packets to the host PC using an ethernet bridge. However, we have seen that some systems are not able to see UDP broadcast packets. Setting `tcp_forward` will create a separate tcp connection between the AP and the ROS node, and the udp packets will be sent to the node from the AP via tcpdump->netcat. This is a little slower and requires more overhead processes on the router, so it is not used by default for systems that can see the udp broadcast. 
-- `lock_topic` : The asus will listen to any access_points messages published on this topic and lock onto the first AP in each message. This is used with the ap\_scanner node (see below) to lock onto the strongest AP nearby, useful for indoor robotics.
+- `lock_topic` : The asus will listen to any [access_points messages](https://github.com/ucsdwcsng/rf_msgs/blob/main/msg/AccessPoints.msg) published on this topic and lock onto the first AP in each message. This is used with the ap\_scanner node (see [below](#real-time-channel-switching)) to lock onto the strongest AP nearby.
+
 - `no_config` : Don't configure the asus router to collect CSI, just start the node. Just for debugging.
 
 ### Using the Data
