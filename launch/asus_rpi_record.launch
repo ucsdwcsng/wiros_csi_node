@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+
+
+<launch>
+    <!-- ARGS -->
+    <!-- <arg name="rvizfile"    default = "$(find wifi_backend)/../../rviz/wifi.rviz" /> -->
+
+    <node pkg="rosbag" type="record" name="csi_record"  output="screen" args="record /csi -o /home/pi/csi"    />
+
+  <!-- MASTER NODE! -->
+    <node pkg="csi_collector" type="nex_csi_node" name="csi_server" output="screen" clear_params="true"
+            required="true">
+
+      <param name="channel"  type="double" value="36" />
+
+      <param name="bw"  type="double" value="80"  />
+
+<!--       Filter for MAC addresses starting with 11:11:11 (17:17:17 in decimal) -->
+      <rosparam param="mac_filter">[172,55,67]</rosparam>
+
+      <!-- ab:cd:ef:gh:ij:kl -->
+
+<!--       beacon rate in ms -->
+
+      <param name="beacon_rate" type="double" value="20"   />
+
+      <param name="asus_pwd" type="string" value="robot123!" />
+    </node>
+</launch>

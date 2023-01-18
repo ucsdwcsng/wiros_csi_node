@@ -1,0 +1,1 @@
+scp -r csi $1@$2:/jffs/

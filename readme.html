@@ -1,0 +1,132 @@
+<p>: figure out if there is a way to force kinetic and melodic to use python3 : make the subnet/asus_ip into a single parameter, if full ip is specified will connect to that else will scan on the subnet.</p>
+<h1 id="ros-wrapper-for-nexmon-csi">ROS Wrapper for Nexmon-CSI</h1>
+<p>This is a package for integrating the <a href="https://github.com/seemoo-lab/nexmon_csi">nexmon-csi</a> platform for an <a href="https://www.asus.com/us/networking-iot-servers/wifi-routers/asus-wifi-routers/rt-ac86u/">ASUS RT-AC86U AP</a> with ROS. It is currently tested on ROS kinetic, melodic, and noetic. The project consists of a core node which interacts with the ASUS router via ethernet, and some secondary nodes which provide additional functionality.</p>
+<h1 id="installation-and-setup">Installation and Setup</h1>
+<p>You need a computer running ROS with an ethernet port to run the platform, and an RT-AC86u AP. If you want to measure AoA, you will need to move the antennas’ positions to create a useful array. We suggest removing the plastic case from the AP using the two screws on the back and placing the antennas in a permanent housing like so.</p>
+<h2 id="step-1-setting-up-the-router">Step 1: Setting up the Router</h2>
+<ul>
+<li><p>We need to be able to log into the AP in order to configure it. Connect to it over ethernet and it will prompt you with a setup webpage. If you bought a refurbished AP you may need to factory reset it using the small black button on the back.</p></li>
+<li>In the setup menu:
+<ul>
+<li>Select “Advanced Settings.”</li>
+<li>Choose Operation Mode-&gt;Access Point(AP) mode-&gt;Manually Assign IP.</li>
+<li>Enter the IP address you want the AP to have (e.g. 192.168.43.xxx) . Subnet mask can be 255.255.255.0 and the default gateway and DNS servers can be 0.0.0.0.</li>
+<li>You can set the SSID and key to whatever you want. They will go down when the AP is in operation.</li>
+<li>We recommend setting the same login and password for all the APs.</li>
+<li>Once you enter these options, the AP will restart.</li>
+</ul></li>
+<li><p>Ensure your ethernet is configured to be able to see the AP. We suggest creating a new connection profile and giving yourself a static IP (e.g. 192.168.43.yyy)</p></li>
+<li><p>Open a browser and enter the AP’s IP (192.168.43.xxx) in the search bar.</p></li>
+<li><p>Login to the AP, and navigate to: Administration-&gt;System-&gt;Service-&gt;Enable SSH-&gt;True. Also set the timeout to zero.</p></li>
+<li><p>We recommend putting all of the APs on the same subnet. If you have a lot of APs in your experiment and don’t want to keep track of which computer is connected to which AP, the node can be set to run nmap and automatically detect the IP of the AP it is connected to, assuming the subnet is known beforehand.</p></li>
+</ul>
+<p>Enable SSH access in system admin settings:</p>
+<ul>
+<li>Navigate to router.asus.com</li>
+<li>Administration-&gt;System-&gt;Enable SSH-&gt;True</li>
+<li>Allow Password-&gt;True</li>
+<li>Set Timeout-&gt;0 (disabled)</li>
+</ul>
+<h2 id="step-2-installing-the-ros-package">Step 2: Installing the ROS package</h2>
+<ul>
+<li>If you do not already have a catkin workspace:</li>
+</ul>
+<pre><code>cd ~ &amp;&amp; mkdir -p catkin_ws/src &amp;&amp; cd catkin_ws &amp;&amp; catkin init</code></pre>
+<ul>
+<li>Enter the source folder and clone this repository:</li>
+</ul>
+<pre><code>cd src &amp;&amp; git clone git@github.com:ucsdwcsng/nexmon_csi_ros.git</code></pre>
+<ul>
+<li>Also install the <a href="https://github.com/ucsdwcsng/rf_msgs">rf_msgs</a> dependency to your source folder (Adds ROS messages for CSI information)</li>
+</ul>
+<pre><code>git clone git@github.com:ucsdwcsng/rf_msgs.git</code></pre>
+<ul>
+<li>Build the node</li>
+</ul>
+<pre><code>catkin config --install #(optional)
+catkin build</code></pre>
+<ul>
+<li>Remember to add the setup script to your .bashrc:</li>
+</ul>
+<pre><code>echo &quot;source ~/catkin_ws/install/setup.bash&quot; &gt;&gt; .bashrc</code></pre>
+<h2 id="step-3-installing-the-nexmon-csi-firmware">Step 3: Installing the Nexmon CSI firmware</h2>
+<ul>
+<li><p>The AP has non-volatile storage mounted at /jffs/ which is where we will install the necessary scripts and binaries, located in nexmon_firmware/csi.</p></li>
+<li>Copy the needed scripts:</li>
+</ul>
+<pre><code>scp -r nexmon_firmware/csi USERNAME@ASUS_IP:/jffs/</code></pre>
+<h1 id="usage-instructions">Usage Instructions</h1>
+<p>On a high level, when you start <code>nex_csi_node</code>, it will attempt to log into the AP and set it to monitor mode. Any packets the AP sees will then be sent over ethernet to the node, where they are converted to ROS message format. While the node can be started with <code>rosrun</code>, we highly recommend using a roslaunch file due to the number of parameters which need to be set to ensure you get the data that you want.</p>
+<h2 id="launch">Launch</h2>
+<p>An example launch script is located in the <code>launch</code> folder and can be launched with:</p>
+<pre><code>roslaunch csi_collector asus.launch</code></pre>
+<p>You should copy this script and modify the parameters to suit your needs.</p>
+<h2 id="parameters">Parameters</h2>
+<p><strong><em>setup params</em></strong></p>
+<ul>
+<li>“tcp_forward” : Forward the packets over TCP instead of directly bridging over ethernet. On ubuntu 20 this should be set to false, on older systems the application has trouble receiving UDP broadcast packets. Still not sure why this happens.</li>
+<li>“lock_topic” : The asus will listen to any access_points messages published on this topic and lock onto the first AP in each message.</li>
+<li>“no_config” : Don’t configure the asus router to collect CSI, just start the node.</li>
+</ul>
+<p><strong><em>channel params</em></strong></p>
+<ul>
+<li>“channel” : The control channel to use</li>
+<li>“bw” : The bandwidth to listen on.</li>
+</ul>
+<p>For example, to listen on channel 155 (the 80mhz channel), you would set bw to 80 and channel to 149, 153, 157 or 141.</p>
+<p><strong><em>packet params</em></strong></p>
+<ul>
+<li>“mac_filter” : A list of bytes (in decimal) to filter for. MAC addresses that do not start with these bytes will be ignored.</li>
+<li>“beacon_rate” : The rate that the asus will transmit beacon packets at in ms. Set to 0 to disable.</li>
+</ul>
+<p>The asus transmits packets whose mac address starts with 11:11:11, so you would set the filter to [17,17,17] to only listen to the packets from other ASUS routers. The last 3 bytes are the first two bytes of your (the computer running the ros node’s) hostname and the last byte of your ethernet IP.</p>
+<p><strong><em>login</em></strong></p>
+<ul>
+<li>“asus_pwd” : The password to login to the ASUS.</li>
+<li>“asus_ip” : The IP of the asus for SSH. Leave blank to auto-detect via nmap.</li>
+</ul>
+<h2 id="csi-messages">CSI Messages</h2>
+<p>Below are the fields of the CSI messages and their meanings.</p>
+<ul>
+<li>uint8 ap_id : Set to 0 for now.</li>
+<li>uint8 txmac[] : Should be of length 6, the MAC address of the transmitter</li>
+<li>uint8 chan : Channel number</li>
+<li>uint32 n_sub : Number of subcarriers (including pilot subcarriers and channel edges)</li>
+<li>uint8 n_rows : Number of rows of the CSI matrix (number of receivers)</li>
+<li>uint8 n_cols : Number of cols of the CSI matrix (number of transmitters). Note that the ASUS will always detect 4 transmitters but some may be zero. In the future the node may automatically remove 0 transmitters.</li>
+<li>uint8 bw : Bandwidth in MHz</li>
+<li>uint8 mcs : Only used for quantenna</li>
+<li>int32 rssi : Signal strength in dB</li>
+<li>uint32 fc : Frame control byte</li>
+<li>uint32 seq : Frame sequence number</li>
+<li>float64[] csi_real : Real part of CSI</li>
+<li>float64[] csi_imag : Imaginary part of CSI</li>
+<li>string rx_id : IP of the asus that received the packet. This can be used to figure out which compensation data to apply.</li>
+<li>uint32 msg_id : Used for quantenna</li>
+</ul>
+<p>The real[] and imag[] arrays are an n_sub x n_rx x n_tx 3-d array stored in fortran order (so, all subcarriers for a given rx-tx pair are stored next to eachother, and all receiver’s subcarriers for a given tx are stored next to eachother.) So you can reshape them in python as</p>
+<pre><code>reshaped_array = flattened_array.reshape((n_sub, n_rx, n_tx), order=&#39;F&#39;)</code></pre>
+<h2 id="debugging">Debugging</h2>
+<p>To print more verbose info about what data the node is receiving, build in debug mode:</p>
+<pre><code>catkin build --cmake-args -DCMAKE_BUILD_TYPE=DEBUG</code></pre>
+<p>Here is a short description of how the node works for debug purposes.</p>
+<ol type="1">
+<li><p>The node calls nmap to search the ethernet subnet for a responsive address. This means you to connect any device running the node to any ASUS, as there isn’t any hard-coded association between them.</p></li>
+<li><p>Once the node has found the ASUS, it will attempt to SSH into it with the provided password. It will run the setup.sh script. setup.sh checks to see if the device already has the firmware loaded, and will reload the firmware if it isn’t. It will then call makecsiparams to create a struct containing info about what CSI you want to collect and pass it to nexutil, which will configure the firmware to start receiving CSI.</p></li>
+<li><p>Once the ASUS is configured, it will start seeing UDP packets addresed to 255.255.255.255 containing CSI data. The node will start a background process on the ASUS that runs tcpdump to hear the UDP packets and will use netcat to pipe them back to the node.</p></li>
+<li><p>Once the node has started receiving CSI packets, it will decode them and publish them as ros messages.</p></li>
+</ol>
+<h2 id="citations">Citations</h2>
+<p>Reminder that if you use this software, you must cite nexmon:</p>
+<p><span class="citation" data-cites="electronic">@electronic</span>{nexmon:project, author = {Schulz, Matthias and Wegemer, Daniel and Hollick, Matthias}, title = {Nexmon: The C-based Firmware Patching Framework}, url = {https://nexmon.org}, year = {2017} }</p>
+<p><span class="citation" data-cites="inproceedings">@inproceedings</span>{10.1145/3349623.3355477, author = {Gringoli, Francesco and Schulz, Matthias and Link, Jakob and Hollick, Matthias}, title = {Free Your CSI: A Channel State Information Extraction Platform For Modern Wi-Fi Chipsets}, year = {2019}, url = {https://doi.org/10.1145/3349623.3355477}, booktitle = {Proceedings of the 13th International Workshop on Wireless Network Testbeds, Experimental Evaluation &amp; Characterization}, pages = {21–28}, series = {WiNTECH ’19} }</p>
+<h2 id="direct-packet-injection">Direct packet injection</h2>
+<p>For debugging purposes or to inject arbitrary packets, you must SSH into the asus itself, configure it, and then run a script that calls nexutil to inject the packets.</p>
+<pre><code>ssh {...}
+
+cd /jffs/csi
+./reload.sh
+./configcsi.sh {channel} {bandwidth} 4 #channel, bandwidth, number of rx-cores
+
+./send.sh {bw} {nss} {1/packet_rate} {MAC address, separated by space} #or an equivalent script</code></pre>
+<p>see send.sh for examples. Essentially, you give the raw wifi frame in bytes(including frame ctl, sequence number, and everything,) and the asus will transmit the frame when it becomes available. Do not change the first four bytes injected as they inform nexutil about how to transmit the packet. The example packet in send.sh starts with the byte 0x88. You can modify send.sh however you want and copy the new files onto the asus to inject different packets.</p>
