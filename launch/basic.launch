@@ -10,11 +10,11 @@
     
     <!-- CHANNEL PARAMS -->
     <!-- 'channel' should be a CONTROL (20 MHz) channel. Nexmon will set to the corresponding 40 or 80MHz channel appropriately. https://en.wikipedia.org/wiki/List_of_WLAN_channels -->
-    <param name="channel"           type="double"       value="157" />
+    <param name="channel"           type="double"       value="36" />
     <param name="bw"                type="double"       value="20" />
     
     <!-- PACKET PARAMS -->
-    <rosparam param="mac_filter"> "11:11:11:*:*:*" </rosparam>
+    <!-- <rosparam param="mac_filter"> "11:11:11:*:*:*" </rosparam> -->
     
     <!-- beacon rate in ms; with mac address 11:11:11:
                                             "first byte of hostname":

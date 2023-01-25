@@ -25,12 +25,14 @@ TODO: Add picture/cad files
     - Next, setup the login details for the AP. We recommend setting the same login and password for all the APs. This will be later needed to ssh into the AP. 
     - Once you enter these options, the AP will restart.
 	
-	
-- Next, we need to set up the ethernet setting on the laptop end. We suggest creating a new connection profile and giving yourself a static IP (e.g. 192.168.43.yyy)
+- Next, we need to set up the ethernet setting on the laptop end. We suggest creating a new connection profile and giving yourself a static IP (e.g. 192.168.43.yyy). Remember to switch to this connection profile or you won't be able to connect to the AP.
 
 - Open a browser and enter the AP's IP (192.168.43.xxx) in the search bar. If this connection fails, confirm if you can ping the AP, check the ethernet connection setting, or reboot the AP. 
 
-- Login to the AP, and navigate to: Administration->System->Service->Enable SSH->True. Also set the timeout to zero. Apply the settings and proceed to the next step. 
+- Login to the AP, and navigate to `Administration->System->Service`.
+    - Set `Enable SSH` to `True` (Or `'LAN only'` on some versions).
+	- Set timeout to zero.
+	- Apply the settings and proceed to the next step. 
 
 
 ### Step 2: Installing the ROS package
@@ -81,9 +83,9 @@ On a high level, when you start `csi_node`, it will attempt to log into the AP a
 
 ### Launch
 
-An example launch script is located in the `launch` folder and can be launched with:
+An example launch script is located in the `launch` folder:
 ```
-roslaunch nexmon_csi_ros basic.launch
+launch/basic.launch
 ```
 You should copy this script and modify the parameters to suit your needs.
 
