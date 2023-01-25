@@ -5,7 +5,7 @@
     
     <!-- LOGIN DETAILS -->
     <param name="asus_pwd"          type="string"       value="password" /> <!-- password setup during Asus bringup-->
-
+	<param name="asus_host"        type="string"       value="csi"  />
     <param name="asus_ip"           type="string"       value="192.168.43.*" />
     
     <!-- CHANNEL PARAMS -->

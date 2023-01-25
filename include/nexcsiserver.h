@@ -52,8 +52,6 @@ const char* bw_arg = "-b";
 const char* mac_arg = "-m";
 const char* rx_arg = "-r";
 
-const char* rx_host = "wcsng";
-
 
 //111111 - exponent of 
 const uint32_t e_mask = (1<<6)-1;

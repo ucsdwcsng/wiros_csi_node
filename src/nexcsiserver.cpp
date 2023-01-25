@@ -16,6 +16,7 @@ size_t csi_size = 0;
 //Info about the ASUS that the node is connected to
 std::string rx_ip;
 std::string rx_pass;
+std::string rx_host;
 
 //Forward the packets over tcpdump->netcat (older kernels won't receive the udp broadcasts)
 bool use_tcp = false;
@@ -597,6 +598,7 @@ void setup_params(ros::NodeHandle& nh){
     nh.param<std::string>("asus_pwd", rx_pass, "password");
     nh.param<bool>("no_config", no_config, false);
     nh.param<std::string>("lock_topic", lock_topic, "");
+	nh.param<std::string>("asus_host", rx_host, "HOST");
 
 //MAC filter param
     std::string mac_filter_temp;
