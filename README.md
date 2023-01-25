@@ -14,7 +14,7 @@ TODO: Add picture/cad files
 
 ### Step 1: Setting up the Router
 
-- We need to be able to log into the AP in order to configure it. Connect to it over ethernet and it will prompt you with a setup webpage. If you bought a refurbished AP you may need to factory reset it using the small "Reset" button on the back. Press and hold this button for 5-10 seconds and the AP will reboot. You can then connect to it at [router.asus.com](router.asus.com) over Ethernet+DHCP.
+- We need to be able to log into the AP in order to configure it. Connect to it over ethernet and it will prompt you with a setup webpage. If you bought a refurbished AP you may need to factory reset it using the small "Reset" button on the back. Press and hold this button for 5-10 seconds and the AP will reboot. You can then connect to it at [router.asus.com](http://router.asus.com) over Ethernet+DHCP.
 
 - In the setup menu for the AP:
     - Select "Advanced Settings."
