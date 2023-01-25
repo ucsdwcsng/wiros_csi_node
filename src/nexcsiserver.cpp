@@ -16,7 +16,7 @@ size_t csi_size = 0;
 //Info about the ASUS that the node is connected to
 std::string rx_ip;
 std::string rx_pass;
-std::string rx_host;
+char* rx_host;
 
 //Forward the packets over tcpdump->netcat (older kernels won't receive the udp broadcasts)
 bool use_tcp = false;
@@ -592,13 +592,15 @@ void setup_params(ros::NodeHandle& nh){
     nh.param<double>("bw", tmp_bw, 80.0);
     ch = (int)tmp_ch;
     bw = (int)tmp_bw;
+	std::string tmp_host;
     nh.param<double>("beacon_rate", beacon, 200.0);
     nh.param<bool>("tcp_forward", use_tcp, false);
     nh.param<std::string>("asus_ip", rx_ip, "");
     nh.param<std::string>("asus_pwd", rx_pass, "password");
     nh.param<bool>("no_config", no_config, false);
     nh.param<std::string>("lock_topic", lock_topic, "");
-	nh.param<std::string>("asus_host", rx_host, "HOST");
+	nh.param<std::string>("asus_host", tmp_host, "HOST");
+	rx_host = (char*)tmp_host.c_str();
 
 //MAC filter param
     std::string mac_filter_temp;
