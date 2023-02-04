@@ -496,7 +496,7 @@ void publish_csi(std::vector<csi_instance> &channel_current){
   msgout.bw = csi_0.bw;
   msgout.mcs = 0;
   msgout.rssi = (int32_t)(csi_0.rssi);
-  ROS_INFO("%s: RSSI %d, seq %d, fc %.2hhx, chan %d, rx %s",hr_mac(csi_0.source_mac).c_str(), msgout.rssi, msgout.seq_num, csi_0.fc, msgout.chan, rx_ip.c_str());
+  ROS_INFO("%s:RSSI%d/seq%d/fc%.2hhx/chan%d/rx%s",hr_mac(csi_0.source_mac).c_str(), msgout.rssi, msgout.seq_num, csi_0.fc, msgout.chan, rx_ip.c_str());
   memset(csi_r_out,0,num_floats*sizeof(double));
   memset(csi_i_out,0,num_floats*sizeof(double));
   msgout.rx_id = rx_ip;
@@ -591,6 +591,7 @@ void setup_params(ros::NodeHandle& nh){
   nh.param<bool>("tcp_forward", use_tcp, false);
   nh.param<std::string>("asus_ip", rx_ip, "");
   nh.param<std::string>("asus_pwd", rx_pass, "password");
+  nh.param<std::string>("asus_host", rx_host, "HOST");
   nh.param<bool>("no_config", no_config, false);
   nh.param<std::string>("lock_topic", lock_topic, "");
 
