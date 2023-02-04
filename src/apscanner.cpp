@@ -14,7 +14,6 @@ const std::regex rssi_ex("Signal level=([\\-0-9]+) dBm");
 ros::Publisher pub_5;
 ros::Publisher pub_2;
 
-
 int main(int argc, char* argv[]){
   ros::init(argc, argv, "ap_scanner", ros::init_options::NoSigintHandler);
   ros::NodeHandle nh("~");

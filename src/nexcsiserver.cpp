@@ -179,7 +179,7 @@ int main(int argc, char* argv[]){
   if(beacon > 0) {
 	ROS_INFO("Starting transmitter...");
 	sprintf(setupcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/send.sh 80 4 %d 11 11 11 %x %x %x > /dev/null 2>&1",
-            rx_pass.c_str(), rx_host, rx_ip.c_str(),
+            rx_pass.c_str(), rx_host.c_str(), rx_ip.c_str(),
             (int)beacon*1000, mac4, mac5, mac6);
 	ROS_INFO("%s", setupcmd);
 	ROS_WARN("Beaconing on 11:11:11:%x:%x:%x",mac4,mac5,mac6);
@@ -523,7 +523,7 @@ void handle_shutdown(int sig){
   if(tx_fp){
 	pclose(tx_fp);
 	char killcmd[128];
-	sprintf(killcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s killall send.sh", rx_pass.c_str(), rx_host, rx_ip.c_str());
+	sprintf(killcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s killall send.sh", rx_pass.c_str(), rx_host.c_str(), rx_ip.c_str());
 	sh_exec(std::string(killcmd));
   }
   ros::shutdown();
@@ -561,10 +561,10 @@ std::string reconfigure(){
   char configcmd[512];
   if(filter.len > 1){
 	sprintf(configcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/setup.sh %d %d 4 %.2hhx:%.2hhx:00:00:00:00 2>&1",
-            rx_pass.c_str(), rx_host, rx_ip.c_str(), ch, bw, filter.mac[0],filter.mac[1]);
+            rx_pass.c_str(), rx_host.c_str(), rx_ip.c_str(), ch, bw, filter.mac[0],filter.mac[1]);
   }
   else{
-	sprintf(configcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/setup.sh %d %d 4 2>&1", rx_pass.c_str(), rx_host, rx_ip.c_str(), ch, bw);
+	sprintf(configcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/setup.sh %d %d 4 2>&1", rx_pass.c_str(), rx_host.c_str(), rx_ip.c_str(), ch, bw);
   }
   ROS_INFO("%s",configcmd);
   return sh_exec_block(configcmd);
@@ -572,7 +572,7 @@ std::string reconfigure(){
 
 void setup_tcpdump(std::string hostIP){
   char setupcmd[512];
-  sprintf(setupcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/tcpdump -i eth6 port 5500 -nn -s 0 -w - --immediate-mode | nc %s %d > /dev/null 2>&1", rx_pass.c_str(), rx_host, rx_ip.c_str(), hostIP.c_str(), PORT_TCP);
+  sprintf(setupcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/tcpdump -i eth6 port 5500 -nn -s 0 -w - --immediate-mode | nc %s %d > /dev/null 2>&1", rx_pass.c_str(), rx_host.c_str(), rx_ip.c_str(), hostIP.c_str(), PORT_TCP);
   ROS_INFO("%s",setupcmd);
   cli_fp = popen(setupcmd, "r");
 }
