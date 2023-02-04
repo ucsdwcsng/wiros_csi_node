@@ -1,5 +1,6 @@
-#include <ros/ros.h>
+ #include <ros/ros.h>
 #include "shutils.h"
+#include "utils.h"
 #include <vector>
 #include <stdio.h>
 #include <regex>
@@ -7,7 +8,6 @@
 #include <iomanip>
 #include <rf_msgs/AccessPoints.h>
 
-const std::regex addr_ex("(..):(..):(..):(..):(..):(..)");
 const std::regex channel_ex("Channel:(\\d+)");
 const std::regex rssi_ex("Signal level=([\\-0-9]+) dBm");
 
@@ -21,10 +21,15 @@ int main(int argc, char* argv[]){
   std::string iface;
   std::string topic;
   double scan_period;
+  mac_filter filter;
+  std::string mac_filter_init;
   nh.param<std::string>("iface", iface);
   nh.param<std::string>("topic", topic, "aps");
+  nh.param<std::string>("mac_filter", mac_filter_init, "*:*:*:*:*:*");
   nh.param<double>("period", scan_period, 20.0);
 
+  filter = mac_filter_str(mac_filter_init);
+  
   char topic2[64];
   sprintf(topic2,"%s_2",topic.c_str());
   char topic5[64];
@@ -38,44 +43,54 @@ int main(int argc, char* argv[]){
   
   while(ros::ok()){
 	std::string s = sh_exec_block(scan_cmd);
+	
 	//	  std::string s = sh_exec_block("echo 'Cell:50   Cell Cell  Cell   47 Cell\nCell'");
-	if(s.find("Interface doesn't support") != std::string::npos){
+	/**if(s.find("Interface doesn't support") != std::string::npos){
 	  sleep(0.1);
 	  continue;
-	}
+	  }**/
+	ROS_INFO("%s", s.c_str());
 	
 	rf_msgs::AccessPoints aps_5;
 	rf_msgs::AccessPoints aps_2;
-	
+	ROS_INFO("Detected APs:");
 	size_t s_start = s.find("Cell",0);
 	size_t s_end = s_start;
 	while((s_end=s.find("Cell", s_start+1)) != std::string::npos){
 	  std::string entry = s.substr(s_start, s_end-s_start);
-	  ROS_INFO("%s",entry.c_str());
+	  // ROS_INFO("%s",entry.c_str());
 	  std::smatch mac_match;
 	  std::smatch chan_match;
 	  std::smatch rssi_match;
 	  
 	  rf_msgs::Station ap;
+	  bool pass_filt = true;
 	  if(std::regex_search(entry,mac_match,addr_ex)){
-		ROS_INFO("%s",mac_match[0].str().c_str());
+		//ROS_INFO("%s",mac_match[0].str().c_str());
 		for(int i = 1; i < mac_match.size(); ++i){
 		  ap.mac[i-1] = std::strtol(mac_match[i].str().c_str(), NULL, 16);
-		  ROS_INFO("%s:%d", mac_match[i].str().c_str(),ap.mac[i-1]);
+		  //ROS_INFO("%s:%d", mac_match[i].str().c_str(),ap.mac[i-1]);
 		}
 	  }
-	  else continue;
+	  else pass_filt = false;
+
+	  if(!mac_cmp(ap.mac.data(), filter)) pass_filt = false;
+	  
 	  if(std::regex_search(entry,chan_match,channel_ex)){
 		ap.channel = std::stoi(chan_match[1].str());
-		ROS_INFO("%d", ap.channel);
 	  }
-	  else continue;
+	  else pass_filt = false;
+	  
 	  if(std::regex_search(entry,rssi_match, rssi_ex)){
 		ap.rssi = std::stoi(rssi_match[1].str());
-		ROS_INFO("%d", ap.rssi);
 	  }
-	  else continue;
+	  else pass_filt = false;
 
+	  s_start = s_end;
+	  if(!pass_filt) continue;
+	  
+	  ROS_INFO("%s:\tchan %d\trssi %d",hr_mac(ap.mac.data()).c_str(),ap.channel,ap.rssi);
+	  
 	  if(ap.channel <= 14){
 		aps_2.aps.push_back(ap);
 	  }

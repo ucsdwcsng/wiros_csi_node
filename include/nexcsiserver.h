@@ -26,6 +26,7 @@
 //https://github.com/ucsdwcsng/rf_msgs.git
 #include "rf_msgs/Wifi.h"
 #include "shutils.h"
+#include "utils.h"
 #include "nexmon_csi_ros/ConfigureCSI.h"
 #include "rf_msgs/Station.h"
 #include "rf_msgs/AccessPoints.h"
@@ -69,10 +70,6 @@ const uint32_t i_sign_mask = (1<<17);
 
 const uint32_t count_mask = (1<<10);
 const uint32_t mant_mask = (1<<10)-1;
-
-const std::regex addr_ex("(..|\\*):(..|\\*):(..|\\*):(..|\\*):(..|\\*):(..|\\*)");
-const std::regex ip_ex("([0-9]{1,3})\\.([0-9]{1,3})\\.([0-9]{1,3})\\.([0-9]{1,3}|\\*)");
-const unsigned char mac_zero[6] = {0,0,0,0,0,0};
 
 //holds the remote client's ssh process so we can shut it down properly
 FILE* cli_fp = NULL;
@@ -147,13 +144,6 @@ void ap_info_callback(const rf_msgs::AccessPoints::ConstPtr& msg);
 
 //helper functions
 
-
-//removes non-alphanumeric characters from the command output
-inline bool sanitize_string(char c){
-  return !(c == ' ' || (c>= 32 && c <= 176));
-}
-
-
 //search for new packets in the data stream
 inline bool is_csi_hdr(unsigned char* data){
   for(int i = 0; i < NEW_CSI_HDR/2; ++i){
@@ -177,14 +167,6 @@ size_t find_csi_hdr(unsigned char* csidata){
       return i;
   }
   return NO_HDR_IN_BUF;
-}
-
-//human readable mac address
-std::string hr_mac(const unsigned char* source_mac)
-{
-  char source_mac_str[19];
-  sprintf(source_mac_str, "%.2hhx:%.2hhx:%.2hhx:%.2hhx:%.2hhx:%.2hhx", source_mac[0], source_mac[1], source_mac[2], source_mac[3], source_mac[4], source_mac[5]);
-  return std::string(source_mac_str);
 }
 
 //human readable mac address
@@ -239,46 +221,11 @@ void dbg_csi_raw(uint32_t c){
   ROS_INFO("mi:\t%s",u32_bits_db(c&i_mant_mask).c_str());
 }
 
-//human readable ip address
-std::string hr_ip(unsigned char* source_ip)
-{
-  char source_ip_str[19];
-  sprintf(source_ip_str, "%d.%d.%d.%d", source_ip[0], source_ip[1], source_ip[2], source_ip[3]);
-  return std::string(source_ip_str);
-}
-
 //two bytes to uint16_t
 uint16_t char2u16(char u, char l)
 {
   return (((uint16_t)u) << 8) | (0x00ff & l);
 };
-
-bool mac_cmp(const unsigned char* a, const unsigned char* b){
-  if(a[0] == b[0] && a[1] == b[1] && a[2] == b[2] && a[3] == b[3] && a[4] == b[4] && a[5] == b[5])
-    return true;
-  return false;
-}
-
-std::vector<int> mac_filter_strtovec(std::string in_str){
-  if(in_str == "") return std::vector<int>();
-  
-  std::smatch mac_match;
-  std::vector<int> ret;
-  if(std::regex_search(in_str,mac_match,addr_ex)){
-	for(int i = 1; i < mac_match.size(); ++i){
-	  if(mac_match[i].str() != "*"){
-		ret.push_back(std::strtol(mac_match[i].str().c_str(), NULL, 16));
-	  }
-	}
-  }
-
-  else{
-	ROS_FATAL("Invalid MAC address for filter: %s, should only contain 1-byte hex digits and *", in_str.c_str());
-	exit(EXIT_FAILURE);
-  }
-
-  return ret;
-}
 
 
 #endif //NEXMON_CSI_ROS_NEXCSISERVER_H
