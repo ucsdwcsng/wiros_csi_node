@@ -4,7 +4,10 @@ This is a package for integrating the [nexmon-csi](https://github.com/seemoo-lab
 
 ## Motivation
 
-This tool provides open-source capability for collecting and processing CSI data in an online, scalable manner. While CSI extraction is a well studied topic, the integration of this CSI data into a larger sensor framework presents a lot of systems challenges for researchers. These systems must be designed if we want to implement and test real-world RF sensing systems in an open-source manner. We leverage the robotics community's sensor management tool, [ROS](https://www.ros.org/), which provides a natural framework for measuring and collating CSI data from many access points, as well as running localization algorithms in real-time inside the ROS stack.
+This tool provides open-source capability for collecting and processing CSI data in an online, scalable manner. While CSI extraction is a well studied topic, the integration of this CSI data into a larger sensor framework presents a lot of systems challenges for researchers. We leverage the robotics community's sensor management tool, [ROS](https://www.ros.org/), which provides a natural framework for measuring and collating CSI data from many access points, as well as running Wi-Fi sensing based localization and SLAM algorithms in real-time inside the ROS stack. This package provides ROS nodes to interface with the AC86U's CSI collector and publish data as a ROS message. We have also released a [package](https://github.com/ucsdwcsng/ros_bearing_sensor) which implements bearing-estimation algorithms on the collected CSI data.
+
+<img src="asus_array.jpg" height=60%>
+<em>RT_AC86u with array setup for signal Angle-of-Arrival sensing</em>
 
 ## Installation and Setup
 
