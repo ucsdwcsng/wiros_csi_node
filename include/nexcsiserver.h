@@ -101,7 +101,8 @@ public:
 
 
 struct csi_udp_frame {
-    uint16_t kk1;//magic number
+    uint8_t kk1;//magic number
+    uint8_t id;
     int8_t rssi;//rssi
     uint8_t fc; //frame control
     uint8_t src_mac[6];//source mac

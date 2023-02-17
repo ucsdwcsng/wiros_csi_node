@@ -287,8 +287,11 @@ int main(int argc, char* argv[]){
 		ROS_ERROR("Socket Error: %s", strerror(errno));
 	  }
 	  //	  ROS_INFO("%s", inet_ntoa(cliaddr.sin_addr));
-
+	  
 	  if(n > 0){
+		//#ifdef Debug
+		//ROS_INFO("Read %d", n);
+		//#endif
 		parse_csi(csi_buf, n);
 	  }
     }
@@ -331,8 +334,11 @@ void parse_csi(unsigned char* data, size_t nbytes){
   //8 is sizeof the ethernet header
   csi_udp_frame *rxframe = reinterpret_cast<csi_udp_frame*>(data);
   if(use_software_mac_filter){
+	//#ifdef Debug
+	ROS_INFO("recv from %s", hr_mac(rxframe->src_mac).c_str());
+	//#endif
 	if(!mac_cmp(rxframe->src_mac, filter)) return;
-
+	
 	/**
 	   for(int i = 0; i < mac_filter.size(); ++i){
 	   if(rxframe->src_mac[i] != (uint8_t)mac_filter[i]){
@@ -345,6 +351,7 @@ void parse_csi(unsigned char* data, size_t nbytes){
   csi_instance out;
 
   out.rssi = rxframe->rssi;
+  ROS_INFO("%.4hhx", rxframe->kk1);
   memcpy(out.source_mac, rxframe->src_mac, 6);
   out.seq = rxframe->seqCnt;
   out.fc = (uint8_t)(rxframe->fc);
@@ -458,10 +465,6 @@ void parse_csi(unsigned char* data, size_t nbytes){
 	publish_csi(channel_current);
 	channel_current.clear();
   }
-
-#ifdef DEBUG_CSI
-  ROS_WARN("%s: seq %d fc %.2hhx rx %d tx %d, csi %zu bytes.", hr_mac(out.source_mac).c_str(), out.seq, out.fc, out.rx, out.tx, csi_nbytes);
-#endif
 
   last_seq = out.seq;
   //save the currently extracted CSI
