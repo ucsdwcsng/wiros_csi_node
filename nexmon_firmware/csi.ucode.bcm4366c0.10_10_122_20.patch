@@ -80,7 +80,7 @@
 > skiprelife:
 3367a3446
 > 	mov	0, DUMP_CSI
-3546a3626,3657
+3546a3626,3653
 > #define		MAC_OFFSET	0x1028
 > spin:
 > 	jext	COND_RX_COMPLETE, skip+

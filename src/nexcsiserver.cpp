@@ -334,24 +334,12 @@ void parse_csi(unsigned char* data, size_t nbytes){
   //8 is sizeof the ethernet header
   csi_udp_frame *rxframe = reinterpret_cast<csi_udp_frame*>(data);
   if(use_software_mac_filter){
-	//#ifdef Debug
-	ROS_INFO("recv from %s", hr_mac(rxframe->src_mac).c_str());
-	//#endif
 	if(!mac_cmp(rxframe->src_mac, filter)) return;
-	
-	/**
-	   for(int i = 0; i < mac_filter.size(); ++i){
-	   if(rxframe->src_mac[i] != (uint8_t)mac_filter[i]){
-	   // ROS_WARN("Rejected in software");
-	   return;
-	   }
-	   }
-	**/
   }
   csi_instance out;
 
   out.rssi = rxframe->rssi;
-  ROS_INFO("%.4hhx", rxframe->kk1);
+  //ROS_INFO("%.4hhx", rxframe->kk1);
   memcpy(out.source_mac, rxframe->src_mac, 6);
   out.seq = rxframe->seqCnt;
   out.fc = (uint8_t)(rxframe->fc);
