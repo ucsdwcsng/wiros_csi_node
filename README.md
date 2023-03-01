@@ -1,19 +1,20 @@
 # ROS Wrapper for Nexmon-CSI
 
-This is a package for integrating the [nexmon-csi](https://github.com/seemoo-lab/nexmon_csi) platform for an [ASUS RT-AC86U AP](https://www.asus.com/us/networking-iot-servers/wifi-routers/asus-wifi-routers/rt-ac86u/) with ROS. It is currently tested on ROS kinetic, melodic, and noetic.
+This is a package for integrating the [nexmon-csi](https://github.com/seemoo-lab/nexmon_csi) platform for an [ASUS RT-AC86U AP](https://www.asus.com/us/networking-iot-servers/wifi-routers/asus-wifi-routers/rt-ac86u/) with ROS. It is currently tested on ROS kinetic, melodic, and noetic. 
+
+< Go back to the [index page](https://github.com/ucsdwcsng/WiROS)
 
 ## Motivation
 
 This tool provides open-source capability for collecting and processing CSI data in an online, scalable manner. While CSI extraction is a well studied topic, the integration of this CSI data into a larger sensor framework presents a lot of systems challenges for researchers. We leverage the robotics community's sensor management tool, [ROS](https://www.ros.org/), which provides a natural framework for measuring and collating CSI data from many access points, as well as running Wi-Fi sensing based localization and SLAM algorithms in real-time inside the ROS stack. This package provides ROS nodes to interface with the AC86U's CSI collector and publish data as a ROS message. We have also released a [package](https://github.com/ucsdwcsng/ros_bearing_sensor) which implements bearing-estimation algorithms on the collected CSI data.
 
-<img src="asus_array.jpg" height=60%>
-<em>RT_AC86u with array setup for signal Angle-of-Arrival sensing</em>
+<p align="center"> <img src="asus_array.jpg" height=30%, width=30%> </p>
+<p align="center"> RT_AC86u with array setup for signal Angle-of-Arrival sensing </p>
+
 
 ## Installation and Setup
 
-The project consists of a core node which interacts with the ASUS router via ethernet, and some secondary nodes which provide additional functionality. You need a computer running ROS with an ethernet port to run the platform, and an RT-AC86u AP. If you want to measure AoA, you will need to move the antennas' positions to create a useful array. We suggest removing the plastic case from the AP using the two screws on the back and placing the antennas in a permanent housing like so. 
-
-TODO: Add picture/cad files
+The project consists of a core node which interacts with the ASUS router via ethernet, and some secondary nodes which provide additional functionality. You need a computer running ROS with an ethernet port to run the platform, and an RT-AC86u AP. If you want to measure AoA, you will need to move the antennas' positions to create a useful array. We suggest removing the plastic case from the AP using the two screws on the back and placing the antennas in a permanent housing like as shown above. 
 
 ### Step 1: Setting up the Router
 
@@ -47,10 +48,10 @@ cd ~ && mkdir -p wifi_ws/src && cd wifi_ws && catkin init
 
 - Enter the source folder and clone this repository:
 ```
-cd src && git clone git@github.com:ucsdwcsng/nexmon_csi_ros.git
+cd src && git clone git@github.com:ucsdwcsng/wiros_csi_node.git
 ```
 
-- Also install the [rf\_msgs](https://github.com/ucsdwcsng/rf_msgs) dependency to your source folder (Adds ROS messages for CSI information)
+- Install the [rf\_msgs](https://github.com/ucsdwcsng/rf_msgs) dependency to your source folder (Adds ROS messages for CSI information)
 ```
 git clone git@github.com:ucsdwcsng/rf_msgs.git
 ```
@@ -134,7 +135,7 @@ This repo also contains functionality such as processing the CSI data in real ti
 You can switch the channel/bandwidth/MAC filter on the fly by calling the service `csi_node/configure_csi`. It can be done either from the command line (type `rosservice call /csi_node/configure_csi` and triple-tab to get the command line format suggested) or programatically via the rosservice API.
 
 ### Automatic
-If you are deploying the node on a mobile platform it may be useful to programatically switch channels to gather information about a large number of devices in the environment. We have provided an additional node, `ap_scanner`, which uses your computer's wlan card to intermittently scan for APs and publishes an TODO [`AccessPoints`](TODO:ADD LINK TO FINAL REPO) message sorted by signal strength. The `csi_node` can be configured to try to listen to the strongest AP via the `lock_topic` argument. This will interrupt your device's wifi connectivity. You can also publish your own `AccessPoints` messages to switch channels.
+If you are deploying the node on a mobile platform it may be useful to programatically switch channels to gather information about a large number of devices in the environment. We have provided an additional node, `ap_scanner`, which uses your computer's WiFi card to intermittently scan for APs and publishes an [`AccessPoints`](https://github.com/ucsdwcsng/rf_msgs/blob/main/msg/AccessPoints.msg) message sorted by signal strength. The `csi_node` can be configured to try to listen to the strongest AP via the `lock_topic` argument. This will interrupt your device's wifi connectivity. You can also publish your own `AccessPoints` messages to switch channels.
 
 ```
 rosrun nexmon_csi_ros ap_scanner _iface:=INTERFACE _period:=SCANPERIOD _topic:=PUBLISHTOPIC
