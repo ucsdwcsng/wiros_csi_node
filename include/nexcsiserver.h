@@ -2,8 +2,8 @@
 // Created by wcsng-ros on 3/28/22.
 //
 
-#ifndef NEXMON_CSI_ROS_NEXCSISERVER_H
-#define NEXMON_CSI_ROS_NEXCSISERVER_H
+#ifndef WIROS_CSI_NEXCSISERVER_H
+#define WIROS_CSI_NEXCSISERVER_H
 
 #include <iostream>
 #include <stdlib.h>
@@ -27,7 +27,7 @@
 #include "rf_msgs/Wifi.h"
 #include "shutils.h"
 #include "utils.h"
-#include "nexmon_csi_ros/ConfigureCSI.h"
+#include "wiros_csi_node/ConfigureCSI.h"
 #include "rf_msgs/Station.h"
 #include "rf_msgs/AccessPoints.h"
 
@@ -139,7 +139,7 @@ bool set_chanspec(int s_chan, int s_bw);
 bool set_mac_filter(std::vector<int> filt);
 bool set_mac_filter(const uint8_t* mac);
 
-bool config_csi_callback(nexmon_csi_ros::ConfigureCSI::Request &req, nexmon_csi_ros::ConfigureCSI::Response &resp);
+bool config_csi_callback(wiros_csi_node::ConfigureCSI::Request &req, wiros_csi_node::ConfigureCSI::Response &resp);
 
 void ap_info_callback(const rf_msgs::AccessPoints::ConstPtr& msg);
 
@@ -229,4 +229,4 @@ uint16_t char2u16(char u, char l)
 };
 
 
-#endif //NEXMON_CSI_ROS_NEXCSISERVER_H
+#endif

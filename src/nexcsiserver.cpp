@@ -56,7 +56,7 @@ int main(int argc, char* argv[]){
   spinner.start();
 
 
-  ros::ServiceServer set_chanspec_srv = nh.advertiseService<nexmon_csi_ros::ConfigureCSI::Request, nexmon_csi_ros::ConfigureCSI::Response>("configure_csi",config_csi_callback);
+  ros::ServiceServer set_chanspec_srv = nh.advertiseService<wiros_csi_node::ConfigureCSI::Request, wiros_csi_node::ConfigureCSI::Response>("configure_csi",config_csi_callback);
 
   //handle shutdown
   signal(SIGINT, handle_shutdown);
@@ -187,9 +187,10 @@ int main(int argc, char* argv[]){
   }
 
   char topic_name[256];
-  std::string rx_no_dot(rx_ip);
-  rx_no_dot.erase(remove(rx_no_dot.begin(), rx_no_dot.end(), '.'), rx_no_dot.end());
-  sprintf(topic_name, "csi/%s", rx_no_dot.c_str());
+  // std::string rx_no_dot(rx_ip);
+  // rx_no_dot.erase(remove(rx_no_dot.begin(), rx_no_dot.end(), '.'), rx_no_dot.end());
+  // sprintf(topic_name, "csi", rx_no_dot.c_str());
+  sprintf(topic_name, "/csi");
   pub_csi = nh.advertise<rf_msgs::Wifi>(topic_name,10);
   ROS_INFO("Publishing: %s", pub_csi.getTopic().c_str());
 
@@ -594,7 +595,7 @@ void setup_params(ros::NodeHandle& nh){
 
 
 //handle change of channel, returns false on error.
-bool config_csi_callback(nexmon_csi_ros::ConfigureCSI::Request &req, nexmon_csi_ros::ConfigureCSI::Response &resp){
+bool config_csi_callback(wiros_csi_node::ConfigureCSI::Request &req, wiros_csi_node::ConfigureCSI::Response &resp){
   if(req.chan == ch && req.bw == bw){
 	resp.result = "No Change Applied.";
 	return true;

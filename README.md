@@ -73,7 +73,7 @@ echo "source ~/wifi_ws/install/setup.bash" >> .bashrc
 
 - Copy the needed scripts. The username/password are the same one used to log into the GUI:
 ```
-scp -r ~/wifi_ws/src/nexmon_csi_ros/nexmon_firmware/csi USERNAME@ASUS_IP:/jffs/
+scp -r ~/wifi_ws/src/wiros_csi_node/nexmon_firmware/csi USERNAME@ASUS_IP:/jffs/
 ```
 
 - Mark them as executable:
@@ -138,7 +138,7 @@ You can switch the channel/bandwidth/MAC filter on the fly by calling the servic
 If you are deploying the node on a mobile platform it may be useful to programatically switch channels to gather information about a large number of devices in the environment. We have provided an additional node, `ap_scanner`, which uses your computer's WiFi card to intermittently scan for APs and publishes an [`AccessPoints`](https://github.com/ucsdwcsng/rf_msgs/blob/main/msg/AccessPoints.msg) message sorted by signal strength. The `csi_node` can be configured to try to listen to the strongest AP via the `lock_topic` argument. This will interrupt your device's wifi connectivity. You can also publish your own `AccessPoints` messages to switch channels.
 
 ```
-rosrun nexmon_csi_ros ap_scanner _iface:=INTERFACE _period:=SCANPERIOD _topic:=PUBLISHTOPIC
+rosrun wiros_csi_node ap_scanner _iface:=INTERFACE _period:=SCANPERIOD _topic:=PUBLISHTOPIC
 ```
 
 ## Debugging

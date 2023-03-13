@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(nexmon_csi_ros)
+project(wiros_csi_node)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11 -g)
@@ -153,8 +153,8 @@ add_executable(ap_scanner src/apscanner.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-add_dependencies(csi_node ${catkin_EXPORTED_TARGETS} nexmon_csi_ros_generate_messages_cpp)
-add_dependencies(ap_scanner ${catkin_EXPORTED_TARGETS} nexmon_csi_ros_generate_messages_cpp)
+add_dependencies(csi_node ${catkin_EXPORTED_TARGETS} wiros_csi_node_generate_messages_cpp)
+add_dependencies(ap_scanner ${catkin_EXPORTED_TARGETS} wiros_csi_node_generate_messages_cpp)
 #add_dependencies(bearing_sensor ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against

@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 
 <launch>
-  <node pkg="nexmon_csi_ros" type="csi_node" name="csi_server" output="screen" clear_params="true" required="true">
+  <node pkg="wiros_csi_node" type="csi_node" name="csi_server" output="screen" clear_params="true" required="true">
     
     <!-- LOGIN DETAILS -->
     <param name="asus_pwd"          type="string"       value="password" /> <!-- password setup during Asus bringup-->

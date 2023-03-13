@@ -1,13 +1,11 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>nexmon_csi_ros</name>
+  <name>wiros_csi_node</name>
   <version>0.0.0</version>
-  <description>ROS interface for nexmon_csi</description>
+  <description>ROS interface for wireless sensor</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
-  <!-- Example:  -->
-  <!-- <maintainer email="jane.doe@example.com">Jane Doe</maintainer> -->
-  <maintainer email="wshunter@ucsd.edu">will</maintainer>
+  <maintainer email="wshunter@ucsd.edu">William</maintainer>
 
 
   <!-- One license tag required, multiple allowed, one license per tag -->

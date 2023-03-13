@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <launch>
-  <node pkg="nexmon_csi_ros" type="csi_node" name="csi_server" output="screen" clear_params="true" required="true">
+  <node pkg="wiros_csi_node" type="csi_node" name="csi_server" output="screen" clear_params="true" required="true">
     
     <!-- LOGIN DETAILS -->
     <param name="asus_pwd"          type="string"       value="password" />
@@ -34,7 +34,7 @@
     <param name="no_config"         type="bool"         value="false"    />
   </node>
 
-  <node pkg="nexmon_csi_ros" type="ap_scanner" name="ap_scanner" output="screen" clear_params="true" required="true" launch-prefix="xterm -hold -e" >
+  <node pkg="wiros_csi_node" type="ap_scanner" name="ap_scanner" output="screen" clear_params="true" required="true" launch-prefix="xterm -hold -e" >
 	 <param name="iface"             type="string"       value="wlp3s0"   />
    <param name="mac_filter"        type="string"       value="*:*:*:*:*:*"   />
   </node>
