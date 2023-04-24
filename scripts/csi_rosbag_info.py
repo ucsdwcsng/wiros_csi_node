@@ -16,10 +16,12 @@ topicname = '/csi' if len(sys.argv) < 3 else sys.argv[2]
 
 channelcount = {}
 transmitters = {}
+devices = {}
 
 for topic, msg, t in f.read_messages(topicname):
     tx = f"{msg.txmac[0]:x}:{msg.txmac[1]:x}:{msg.txmac[2]:x}:{msg.txmac[3]:x}:{msg.txmac[4]:x}:{msg.txmac[5]:x}"
     spec = f"{msg.chan}/{msg.bw}"
+    rx = msg.rx_id
 
     if spec not in channelcount:
         channelcount[spec] = 1
@@ -31,6 +33,11 @@ for topic, msg, t in f.read_messages(topicname):
     else:
         transmitters[tx] += 1
 
+    if rx not in devices:
+        devices[rx] = 1
+    else:
+        devices[rx] += 1
+
 print(f"\n---Transmitters Detected---\nMAC\t\t\tCount")
 for tx in transmitters:
     print(f"{tx}\t{transmitters[tx]}")
@@ -38,4 +45,9 @@ for tx in transmitters:
 print(f"\n---CHANSPECs Detected---\nSpec\tCount")
 for spec in channelcount:
     print(f"{spec}\t{channelcount[spec]}")
+
+print(f"\n---Receiver Devices---\nID\t\tCount")
+for rx in devices:
+    print(f"{rx}\t{devices[rx]}")
+
 print("")

@@ -4,13 +4,13 @@
   <node pkg="wiros_csi_node" type="csi_node" name="csi_server" output="screen" clear_params="true" required="true">
     
     <!-- LOGIN DETAILS -->
-    <param name="asus_pwd"          type="string"       value="password" /> <!-- password setup during Asus bringup-->
-	<param name="asus_host"        type="string"       value="csi"  />
-    <param name="asus_ip"           type="string"       value="192.168.43.*" />
+    <param name="asus_pwd"          type="string"       value="robot123!" /> <!-- password setup during Asus bringup-->
+	<param name="asus_host"        type="string"       value="wcsng"  />
+    <param name="asus_ip"           type="string"       value="192.168.43.227" />
     
     <!-- CHANNEL PARAMS -->
     <!-- 'channel' should be a CONTROL (20 MHz) channel. Nexmon will set to the corresponding 40 or 80MHz channel appropriately. https://en.wikipedia.org/wiki/List_of_WLAN_channels -->
-    <param name="channel"           type="double"       value="36" />
+    <param name="channel"           type="double"       value="157" />
     <param name="bw"                type="double"       value="20" />
     
     <!-- PACKET PARAMS -->
