@@ -87,7 +87,7 @@ int main(int argc, char* argv[]){
 	ROS_FATAL("Invalid target IP, needs to be xxx.xxx.xxx.xxx or xxx.xxx.xxx.*");
   }
 
-  std::stringstream IPs(sh_exec("hostname -I"));
+  std::stringstream IPs(sh_exec_block("hostname -I"));
   std::string IP;
   std::string hostIP;
   bool iface_up = false;
@@ -101,7 +101,7 @@ int main(int argc, char* argv[]){
 		ROS_INFO("Scanning for ASUS routers...");
 		sprintf(cmd, "nmap -sP %s0/24", subnet);
 		ROS_INFO("%s", cmd);
-		std::stringstream nmap(sh_exec(cmd));
+		std::stringstream nmap(sh_exec_block(cmd));
 		std::string target;
 		while(getline(nmap, target, ' ')){
 		  if (target.rfind(subnet, 0) == 0){
@@ -131,7 +131,7 @@ int main(int argc, char* argv[]){
   }
 
   //figure out the name of this computer
-  hostname = sh_exec("hostname");
+  hostname = sh_exec_block("hostname");
   //mac address we will transmit on will be 17:17:17:first byte of name:second byte of name:last byte of ip4
   uint8_t mac4 = hostname[0];
   uint8_t mac5 = hostname[1];
@@ -213,6 +213,12 @@ int main(int argc, char* argv[]){
 	  perror("socket creation failed");
 	  exit(EXIT_FAILURE);
     }
+	struct timeval tv;
+	tv.tv_sec = 1;
+	tv.tv_usec = 10000;
+	if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0) {
+	  perror("Error");
+	}
   }
   memset(&servaddr, 0, sizeof(servaddr));
   memset(&cliaddr, 0, sizeof(cliaddr));
@@ -283,8 +289,11 @@ int main(int argc, char* argv[]){
 
   //normal udp broadcast version
   if(!use_tcp){
-    while(ros::ok()){
+    while(ros::ok() && !ros::isShuttingDown()){
 	  if ((n = recvfrom(sockfd, csi_buf, CSI_BUF_SIZE, 0, (struct sockaddr *)&cliaddr, &sockaddr_len)) == -1){
+		if(errno == ETIMEDOUT || errno == EAGAIN){
+		  continue;
+		}
 		ROS_ERROR("Socket Error: %s", strerror(errno));
 	  }
 	  //	  ROS_INFO("%s", inet_ntoa(cliaddr.sin_addr));
@@ -509,16 +518,22 @@ void publish_csi(std::vector<csi_instance> &channel_current){
 }
 
 void handle_shutdown(int sig){
+  ROS_WARN("Shutting down.");
   if(cli_fp){
+	ROS_WARN("Closing tcpdump process");
 	pclose(cli_fp);
   }
   if(tx_fp){
+	ROS_WARN("Closing tx process");
 	pclose(tx_fp);
 	char killcmd[128];
+	
 	sprintf(killcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s killall send.sh", rx_pass.c_str(), rx_host.c_str(), rx_ip.c_str());
 	sh_exec(std::string(killcmd));
   }
+  ROS_WARN("Calling ros::shutdown()");
   ros::shutdown();
+  ROS_WARN("Done.");
 
 }
 

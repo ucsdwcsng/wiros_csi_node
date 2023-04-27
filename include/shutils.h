@@ -8,32 +8,12 @@
 #include <fcntl.h>
 
 //run shell command
-std::string sh_exec(std::string cmd){
+void sh_exec(std::string cmd){
   char buf[256];
   //open process
-  FILE* pipe = popen(cmd.c_str(), "r");
-  //tell linux not to block file
-  int desc = fileno(pipe);
-  fcntl(desc, F_SETFL, O_NONBLOCK);
-
-  if (!pipe) {
-    std::cout << "popen failed." << std::endl;
-    exit(1);
-  }
-
-  std::string out;
-  while (ros::ok() && !feof(pipe)) {
-    ssize_t r = read(desc, buf, 256);
-    if (r == -1 && errno == EAGAIN)
-      sleep(0.05);
-    else if (r > 0){
-      out += buf;
-    }
-    else
-      break;
-  }
-  pclose(pipe);
-  return out;
+  if(!popen(cmd.c_str(), "r"))
+	printf("Error opening process %s", cmd.c_str());
+  return;
 }
 
 //run shell command(blocking)
