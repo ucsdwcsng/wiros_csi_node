@@ -11,4 +11,5 @@ else
 	echo "reloaded" >> /tmp/home/root/reload.txt
 fi
 /sbin/rmmod dhd ; /sbin/insmod ./dhd.ko ; brctl addif br0 eth6
+brctl addif br0 eth5
 brctl show br0
