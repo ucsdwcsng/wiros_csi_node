@@ -103,9 +103,9 @@ You should copy this script and modify the parameters to suit your needs.
 ***channel params***
 
 - `channel` : The channel to listen on. Should be set to a control channel. The ASUS can only see packets sent on this channel.
-- `bw`  : The bandwidth to listen to (20,40,or 80.) Most traffic in the wild is 20MHz. Listening on 40 or 80MHz, you may occasionally pick up 20MHz transmissions which will fill the corresponding subcarriers, the others will be noise. 
+- `bw`  : The bandwidth to listen to (20,40,or 80.) Most traffic in the wild is 20MHz. Listening on 40 or 80MHz, you may occasionally pick up 20MHz transmissions which will fill the corresponding subcarriers, the others will be noise. You should select 20MHz if you are listening on a 2.4GHz channel.
 
-To familiarize yourself with which channels are valid to listen on, we recommend checking out [this list](https://en.wikipedia.org/wiki/List_of_WLAN_channels#5_GHz_(802.11a/h/j/n/ac/ax)).
+To familiarize yourself with which channels are valid to listen on, we recommend checking out [this list](https://en.wikipedia.org/wiki/List_of_WLAN_channels#5_GHz_(802.11a/h/j/n/ac/ax)), or the corresponding 2.4GHz section above.
 For example, to listen on channel 155 (80MHz centered at 5.775 GHz), you would set bw to 80 and channel to either 149, 153, 157 or 141 (The control channels which expand to channel 155).
 
 ***packet params***
