@@ -39,16 +39,18 @@ if [ "$PERIOD" = "" ]; then
   PERIOD=10000
 fi
 
-MAC1=$4
-MAC2=$5
-MAC3=$6
-MAC4=$7
-MAC5=$8
-MAC6=$9
+IFACE=$4
+
+MAC1=$5
+MAC2=$6
+MAC3=$7
+MAC4=$8
+MAC5=$9
+MAC6=$10
 
 T0=$(date +%s)
 while true; do
-./nexutil -I eth6 -s 505 -b -l 574 -v `printf "\
+./nexutil -I ${IFACE} -s 505 -b -l 574 -v `printf "\
 \x${NSS}0\x00\x0${B}\x02\
 \x88\x02\x20\x00\
 \xff\xff\xff\xff\xff\xff\

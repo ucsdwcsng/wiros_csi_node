@@ -35,6 +35,8 @@ ros::Subscriber sub_ap;
 int ch, bw;
 double beacon;
 
+std::string iface;
+
 //MAC addresses to be filtered for in software
 mac_filter filter;
 bool use_software_mac_filter = true;
@@ -178,9 +180,9 @@ int main(int argc, char* argv[]){
 
   if(beacon > 0) {
 	ROS_INFO("Starting transmitter...");
-	sprintf(setupcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/send.sh 80 4 %d 11 11 11 %x %x %x > /dev/null 2>&1",
+	sprintf(setupcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/send.sh 80 4 %d %s 11 11 11 %x %x %x > /dev/null 2>&1",
             rx_pass.c_str(), rx_host.c_str(), rx_ip.c_str(),
-            (int)beacon*1000, mac4, mac5, mac6);
+            (int)beacon*1000, iface.c_str(), mac4, mac5, mac6);
 	ROS_INFO("%s", setupcmd);
 	ROS_WARN("Beaconing on 11:11:11:%x:%x:%x",mac4,mac5,mac6);
 	tx_fp = popen(setupcmd, "r");
@@ -565,6 +567,16 @@ bool set_mac_filter(mac_filter filt){
 }
 
 std::string reconfigure(){
+
+    //reset iface
+  if(ch >= 32){
+      iface = "eth6";
+  }
+  else{
+      iface = "eth5";
+  }
+
+    
   char configcmd[512];
   if(filter.len > 1){
 	sprintf(configcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/setup.sh %d %d 4 %.2hhx:%.2hhx:00:00:00:00 2>&1",
