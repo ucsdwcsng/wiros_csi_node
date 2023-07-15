@@ -35,7 +35,9 @@ ros::Subscriber sub_ap;
 int ch, bw;
 double beacon;
 
+//parameters that differ between 2.4GHz and 5GHz.
 std::string iface;
+int tx_nss;
 
 //MAC addresses to be filtered for in software
 mac_filter filter;
@@ -180,8 +182,8 @@ int main(int argc, char* argv[]){
 
   if(beacon > 0) {
 	ROS_INFO("Starting transmitter...");
-	sprintf(setupcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/send.sh 80 4 %d %s 11 11 11 %x %x %x > /dev/null 2>&1",
-            rx_pass.c_str(), rx_host.c_str(), rx_ip.c_str(),
+	sprintf(setupcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/send.sh %d %d %d %s 11 11 11 %x %x %x > /dev/null 2>&1",
+            rx_pass.c_str(), rx_host.c_str(), rx_ip.c_str(), bw, tx_nss,
             (int)beacon*1000, iface.c_str(), mac4, mac5, mac6);
 	ROS_INFO("%s", setupcmd);
 	ROS_WARN("Beaconing on 11:11:11:%x:%x:%x",mac4,mac5,mac6);
@@ -571,9 +573,11 @@ std::string reconfigure(){
     //reset iface
   if(ch >= 32){
       iface = "eth6";
+	  tx_nss = 4;
   }
   else{
       iface = "eth5";
+	  tx_nss = 3;
   }
 
     
