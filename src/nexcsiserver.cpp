@@ -595,7 +595,7 @@ std::string reconfigure(){
 
 void setup_tcpdump(std::string hostIP){
   char setupcmd[512];
-  sprintf(setupcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/tcpdump -i eth6 port 5500 -nn -s 0 -w - --immediate-mode | nc %s %d > /dev/null 2>&1", rx_pass.c_str(), rx_host.c_str(), rx_ip.c_str(), hostIP.c_str(), PORT_TCP);
+  sprintf(setupcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/tcpdump -i %s port 5500 -nn -s 0 -w - --immediate-mode | nc %s %d > /dev/null 2>&1", rx_pass.c_str(), rx_host.c_str(), rx_ip.c_str(), iface, hostIP.c_str(), PORT_TCP);
   ROS_INFO("%s",setupcmd);
   cli_fp = popen(setupcmd, "r");
 }
