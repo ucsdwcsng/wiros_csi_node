@@ -18,7 +18,7 @@ The project consists of a core node which interacts with the ASUS router via eth
 
 ### Step 1: Setting up the Router
 
-- We need to be able to log into the AP in order to configure it. Connect to it over ethernet and it will prompt you with a setup webpage. If you bought a refurbished AP you may need to factory reset it using the small "Reset" button on the back. Press and hold this button for 5-10 seconds and the AP will reboot. You can then connect to it at [router.asus.com](http://router.asus.com) over Ethernet+DHCP.
+- We need to be able to log into the AP in order to configure it. Connect to it over ethernet and it will prompt you with a setup webpage. If you bought a refurbished AP you may need to factory reset it using the small "Reset" button on the back. Press and hold this button for 5-10 seconds and the AP will reboot. You can then connect to it at [router.asus.com](http://router.asus.com) over Ethernet. If you can't access the router, you probably need to configure your ethernet interface to use DHCP.
 
 - In the setup menu for the AP:
     - Select "Advanced Settings."
@@ -64,7 +64,7 @@ catkin build (or) catkin_make
 
 - Remember to add the setup script to your .bashrc:
 ```
-echo "source ~/wifi_ws/install/setup.bash" >> .bashrc
+echo "source ~/wifi_ws/install/setup.bash" >> ~/.bashrc
 ```
 
 ### Step 3: Installing the Nexmon CSI firmware
@@ -103,9 +103,9 @@ You should copy this script and modify the parameters to suit your needs.
 ***channel params***
 
 - `channel` : The channel to listen on. Should be set to a control channel. The ASUS can only see packets sent on this channel.
-- `bw`  : The bandwidth to listen to (20,40,or 80.) Most traffic in the wild is 20MHz. Listening on 40 or 80MHz, you may occasionally pick up 20MHz transmissions which will fill the corresponding subcarriers, the others will be noise. 
+- `bw`  : The bandwidth to listen to (20,40,or 80.) Most traffic in the wild is 20MHz. Listening on 40 or 80MHz, you may occasionally pick up 20MHz transmissions which will fill the corresponding subcarriers, the others will be noise. You should select 20MHz if you are listening on a 2.4GHz channel.
 
-To familiarize yourself with which channels are valid to listen on, we recommend checking out [this list](https://en.wikipedia.org/wiki/List_of_WLAN_channels#5_GHz_(802.11a/h/j/n/ac/ax)).
+To familiarize yourself with which channels are valid to listen on, we recommend checking out [this list](https://en.wikipedia.org/wiki/List_of_WLAN_channels#5_GHz_(802.11a/h/j/n/ac/ax)), or the corresponding 2.4GHz section above.
 For example, to listen on channel 155 (80MHz centered at 5.775 GHz), you would set bw to 80 and channel to either 149, 153, 157 or 141 (The control channels which expand to channel 155).
 
 ***packet params***
@@ -114,6 +114,8 @@ For example, to listen on channel 155 (80MHz centered at 5.775 GHz), you would s
 The list can be 0-6 bytes. The first two bytes are filtered for in hardware on the asus to reduce traffic between the bcm4366c0 wifi card and the asus's kernel. The other bytes are filtered in software on the node. For example, if you want to only listen to CSI from `12:34:56:78:9b`, you would set this as your MAC filter. If you wanted to listen to the devices `11:11:11:00:00:00` and `11:11:11:22:22:22`, you would set the filter to `"11:11:11:*:*:*"`
 
 - `beacon_rate` : If nonzero, the asus will transmit a beacon packet every `beacon_rate` milliseconds. The packet's MAC address will be `11:11:11:a:b:x`, where a and b are the first two bytes of the computer running ROS's hostname, and x is the last byte of their ethernet IP.
+
+- `beacon_tx_nss` : How many transmiter antennas to beacon with. Maximum of 3 for 2.4GHz channels and 4 for 5GHz channels.
 
 ***setup params***
 

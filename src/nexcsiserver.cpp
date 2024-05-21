@@ -35,6 +35,10 @@ ros::Subscriber sub_ap;
 int ch, bw;
 double beacon;
 
+//parameters that differ between 2.4GHz and 5GHz.
+std::string iface;
+int tx_nss;
+
 //MAC addresses to be filtered for in software
 mac_filter filter;
 bool use_software_mac_filter = true;
@@ -178,9 +182,9 @@ int main(int argc, char* argv[]){
 
   if(beacon > 0) {
 	ROS_INFO("Starting transmitter...");
-	sprintf(setupcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/send.sh 80 4 %d 11 11 11 %x %x %x > /dev/null 2>&1",
-            rx_pass.c_str(), rx_host.c_str(), rx_ip.c_str(),
-            (int)beacon*1000, mac4, mac5, mac6);
+	sprintf(setupcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/send.sh %d %d %d %s 11 11 11 %x %x %x > /dev/null 2>&1",
+            rx_pass.c_str(), rx_host.c_str(), rx_ip.c_str(), bw, tx_nss,
+            (int)beacon*1000, iface.c_str(), mac4, mac5, mac6);
 	ROS_INFO("%s", setupcmd);
 	ROS_WARN("Beaconing on 11:11:11:%x:%x:%x",mac4,mac5,mac6);
 	tx_fp = popen(setupcmd, "r");
@@ -565,6 +569,18 @@ bool set_mac_filter(mac_filter filt){
 }
 
 std::string reconfigure(){
+
+    //reset iface
+  if(ch >= 32){
+      iface = "eth6";
+	  tx_nss = tx_nss > 4 ? 4 : tx_nss;
+  }
+  else{
+      iface = "eth5";
+	  tx_nss = tx_nss > 3 ? 3 : tx_nss;
+  }
+
+    
   char configcmd[512];
   if(filter.len > 1){
 	sprintf(configcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/setup.sh %d %d 4 %.2hhx:%.2hhx:00:00:00:00 2>&1",
@@ -579,7 +595,7 @@ std::string reconfigure(){
 
 void setup_tcpdump(std::string hostIP){
   char setupcmd[512];
-  sprintf(setupcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/tcpdump -i eth6 port 5500 -nn -s 0 -w - --immediate-mode | nc %s %d > /dev/null 2>&1", rx_pass.c_str(), rx_host.c_str(), rx_ip.c_str(), hostIP.c_str(), PORT_TCP);
+  sprintf(setupcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/tcpdump -i %s port 5500 -nn -s 0 -w - --immediate-mode | nc %s %d > /dev/null 2>&1", rx_pass.c_str(), rx_host.c_str(), rx_ip.c_str(), iface.c_str(), hostIP.c_str(), PORT_TCP);
   ROS_INFO("%s",setupcmd);
   cli_fp = popen(setupcmd, "r");
 }
@@ -595,12 +611,14 @@ void setup_params(ros::NodeHandle& nh){
   ch = (int)tmp_ch;
   bw = (int)tmp_bw;
   nh.param<double>("beacon_rate", beacon, 200.0);
+  nh.param<int>("beacon_tx_nss", tx_nss, 4);
   nh.param<bool>("tcp_forward", use_tcp, false);
   nh.param<std::string>("asus_ip", rx_ip, "");
   nh.param<std::string>("asus_pwd", rx_pass, "password");
   nh.param<std::string>("asus_host", rx_host, "HOST");
   nh.param<bool>("no_config", no_config, false);
   nh.param<std::string>("lock_topic", lock_topic, "");
+  
 
   //MAC filter param
   std::string mac_filter_temp;
