@@ -1,13 +1,13 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.3)
 project(wiros_csi_node)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++11 -g)
+add_compile_options(-std=c++14 -g)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp ")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 ## optimization
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -DNDEBUG -ffast-math -fno-math-errno")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -DNDEBUG")
 
 IF(CMAKE_BUILD_TYPE MATCHES DEBUG)
     message("Building in DEBUG mode.")
@@ -17,14 +17,23 @@ ENDIF(CMAKE_BUILD_TYPE MATCHES DEBUG)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS
-        roscpp
-        rospy
-        std_msgs
-        sensor_msgs
-        rf_msgs
-        message_generation
-)
+if(TARGET_ROS2)
+  message("Targeting ROS2")
+  find_package(ament_cmake REQUIRED)
+  find_package(std_msgs REQUIRED)
+  find_package(rf_msgs REQUIRED)
+  find_package(sensor_msgs REQUIRED)
+  find_package(rosidl_default_generators REQUIRED)
+else()
+  find_package(catkin REQUIRED COMPONENTS
+    roscpp
+    rospy
+    std_msgs
+    sensor_msgs
+    rf_msgs
+    message_generation
+  )
+endif()
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 #find_package(Eigen3 REQUIRED)
