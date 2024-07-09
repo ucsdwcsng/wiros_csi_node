@@ -570,7 +570,7 @@ bool set_mac_filter(mac_filter filt){
 
 std::string reconfigure(){
 
-    //reset iface
+  //reset iface
   if(ch >= 32){
       iface = "eth6";
 	  tx_nss = tx_nss > 4 ? 4 : tx_nss;

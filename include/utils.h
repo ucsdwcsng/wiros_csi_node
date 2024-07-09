@@ -1,8 +1,8 @@
 #include <vector>
 #include <regex>
 
-const std::regex addr_ex("(..|\\*):(..|\\*):(..|\\*):(..|\\*):(..|\\*):(..|\\*)");
-const std::regex ip_ex("([0-9]{1,3})\\.([0-9]{1,3})\\.([0-9]{1,3})\\.([0-9]{1,3}|\\*)");
+const std::regex addr_regex("(..|\\*):(..|\\*):(..|\\*):(..|\\*):(..|\\*):(..|\\*)");
+const std::regex ip_regex("([0-9]{1,3})\\.([0-9]{1,3})\\.([0-9]{1,3})\\.([0-9]{1,3}|\\*)");
 const unsigned char mac_zero[6] = {0,0,0,0,0,0};
 
 class mac_filter{
