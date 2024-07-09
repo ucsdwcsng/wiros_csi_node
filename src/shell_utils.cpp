@@ -1,7 +1,5 @@
 #include <shell_utils.hpp>
 
-
-
 void sh_exec(std::string cmd) {
     std::array<char, 128> buffer;
     std::string result;
