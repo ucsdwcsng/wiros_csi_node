@@ -93,9 +93,9 @@ public:
     uint16_t seq;
     uint8_t fc;
     ~csi_instance(){
-      if(!csi_r)
+      if(csi_r)
         delete csi_r;
-      if(!csi_i)
+      if(csi_i)
         delete csi_i;
     }
 };

@@ -17,23 +17,14 @@ ENDIF(CMAKE_BUILD_TYPE MATCHES DEBUG)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-if(TARGET_ROS2)
-  message("Targeting ROS2")
-  find_package(ament_cmake REQUIRED)
-  find_package(std_msgs REQUIRED)
-  find_package(rf_msgs REQUIRED)
-  find_package(sensor_msgs REQUIRED)
-  find_package(rosidl_default_generators REQUIRED)
-else()
-  find_package(catkin REQUIRED COMPONENTS
-    roscpp
-    rospy
-    std_msgs
-    sensor_msgs
-    rf_msgs
-    message_generation
-  )
-endif()
+find_package(catkin REQUIRED COMPONENTS
+  roscpp
+  rospy
+  std_msgs
+  sensor_msgs
+  rf_msgs
+  message_generation
+)
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 #find_package(Eigen3 REQUIRED)
@@ -125,7 +116,6 @@ catkin_package(
    CATKIN_DEPENDS std_msgs sensor_msgs roscpp rospy message_runtime rf_msgs
 #  DEPENDS system_lib
 )
-
 # find_package(Eigen3 REQUIRED)
 
 ###########
