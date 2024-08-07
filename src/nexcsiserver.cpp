@@ -146,13 +146,6 @@ int main(int argc, char* argv[]){
 	return 0;
   }
 
-  if(!iface_up){
-	ROS_INFO("The connection w/subnet %s is not active.", subnet);
-	exit(1);
-  }
-
-
-
   //configure the receiver
   ROS_INFO("Configuring Receiver...");
 

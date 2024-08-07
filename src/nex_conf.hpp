@@ -1,22 +1,14 @@
+#pragma once
 #include <string>
+#include <cstring>
+#include <regex>
+#include <unistd.h>
 
-typedef struct csi_config{
-  int channel;
-  int bw;
-  double beacon_rate;
-  int beacon_tx_streams;
-  std::string dev_ip;
-  std::string dev_password;
-  std::string dev_hostname;
-  std::string rx_mac_filter;
-} csi_config_t;
+#include "shell_utils.hpp"
+#include "ros_interface.hpp"
 
-typedef struct nex_config{
-  double beacon_rate;
-  bool use_tcp_forward;
-  std::string lock_topic;
-  csi_config_t csi_config;
-} nex_config_t;
+const std::regex ip_ex("([0-9]{1,3})\\.([0-9]{1,3})\\.([0-9]{1,3})\\.([0-9]{1,3}|\\*)");
+const std::regex addr_ex("(..|\\*):(..|\\*):(..|\\*):(..|\\*):(..|\\*):(..|\\*)");
 
 class mac_filter_t{
  public:
@@ -33,13 +25,13 @@ class mac_filter_t{
     }
   }
   mac_filter_t(std::string filt_str){
-    if(in_str == ""){
+    if(filt_str == ""){
       len=0;
       memset(mac,0,6);
-      return
+      return;
     }
     std::smatch mac_match;
-    if(std::regex_search(in_str,mac_match,addr_ex)){
+    if(std::regex_search(filt_str,mac_match,addr_ex)){
       int i;
       for(i=1 ; i < mac_match.size(); ++i){
 	if(mac_match[i].str() != "*"){
@@ -50,11 +42,41 @@ class mac_filter_t{
       len = i - 1;
     }
     else{
-      ROS_FATAL("Invalid MAC address for filter: %s, should only contain 1-byte hex digits and *", in_str.c_str());
+      ROS_FATAL("Invalid MAC address for filter: %s, should only contain 1-byte hex digits and *", filt_str.c_str());
       exit(EXIT_FAILURE);
     }
   }
+  bool matches(uint8_t m[6]) const{
+    for(int i = 0; i < len; ++i){
+      if(m[i] != mac[i]) return false;
+    }
+    return true;
+  }
+
 };
+
+
+typedef struct csi_config{
+  int channel;
+  int bw;
+  double beacon_rate;
+  uint8_t beacon_mac_4;
+  uint8_t beacon_mac_5;
+  uint8_t beacon_mac_6;
+  int beacon_tx_streams;
+  std::string dev_ip;
+  std::string dev_password;
+  std::string dev_hostname;
+  mac_filter_t rx_mac_filter;
+} csi_config_t;
+
+
+typedef struct nex_config{
+  bool use_tcp_forward;
+  std::string lock_topic;
+  csi_config_t csi_config;
+} nex_config_t;
+
 
 
 std::string apply_csi_config(csi_config_t conf){
@@ -75,10 +97,10 @@ std::string apply_csi_config(csi_config_t conf){
   
   if(filter.len > 1){
 	sprintf(configcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/setup.sh %d %d 4 %.2hhx:%.2hhx:00:00:00:00 2>&1",
-            dev_password.c_str(), dev_hostname.c_str(), dev_ip.c_str(), ch, bw, filter.mac[0],filter.mac[1]);
+            conf.dev_password.c_str(), conf.dev_hostname.c_str(), conf.dev_ip.c_str(), conf.channel, conf.bw, conf.rx_mac_filter.mac[0],conf.rx_mac_filter.mac[1]);
   }
   else{
-	sprintf(configcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/setup.sh %d %d 4 2>&1", dev_password.c_str(), dev_hostname.c_str(), dev_ip.c_str(), ch, bw);
+	sprintf(configcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/setup.sh %d %d 4 2>&1", conf.dev_password.c_str(), conf.dev_hostname.c_str(), conf.dev_ip.c_str(), conf.channel, conf.bw);
   }
 
   ret += "RUN: " + std::string(configcmd);
@@ -87,7 +109,7 @@ std::string apply_csi_config(csi_config_t conf){
     output = sh_exec_block(configcmd);
     ROS_INFO("\n***\nSetup Output:\n\n%s\n***", output.c_str());
     if(output.find("Permission denied") != std::string::npos){
-      ROS_ERROR("A device was found at %s, but it refused SSH access.\nPlease check the 'asus_pwd' param and ensure it is set to the device's password.\nCurrent passsword: %s\nThis may also be caused by setup scripts not having the correct permissions set.",rx_ip.c_str(),rx_pass.c_str());
+      ROS_ERROR("A device was found at %s, but it refused SSH access.\nPlease check the 'asus_pwd' param and ensure it is set to the device's password.\nCurrent passsword: %s\nThis may also be caused by setup scripts not having the correct permissions set.",conf.dev_ip.c_str(),conf.dev_password.c_str());
       exit(EXIT_FAILURE);
     } else if(output.find("Connection refused") != std::string::npos){
       ROS_INFO("Waiting 5 seconds and retrying...");
