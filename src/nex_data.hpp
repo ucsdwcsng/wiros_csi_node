@@ -52,3 +52,6 @@ struct csi_udp_frame {
     //then follows the csi bytes, for 80MHZ:
     //uint32_t csi_values[512];
 };
+
+//human readable mac address
+std::string mac_to_string(unsigned char const* source_mac);

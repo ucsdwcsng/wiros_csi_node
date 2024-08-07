@@ -30,8 +30,6 @@ uint16_t g_last_seq;
 
 //forward decl of local functions
 void handle_shutdown(int sig);
-//nex_config_t setup_params(ros::NodeHandle& nh);
-void contact_device(nex_config_t& params);
 
 std::array<uint8_t, CSI_BUF_SIZE> g_csi_buf;
 
@@ -39,7 +37,7 @@ void handle_shutdown(int sig){
   g_ok  = false;
 }
 
-void contact_device(nex_config_t& params){
+int contact_device(nex_config_t& params){
   //automatically find connected asus router
   std::smatch ip_match;
   char subnet[20];
@@ -88,18 +86,18 @@ void contact_device(nex_config_t& params){
 	ROS_ERROR("The host at %s did not respond to a ping.", params.csi_config.dev_ip.c_str());
 	ROS_ERROR("This is probably because the 'asus_ip' param is setup to the incorrect value.");
 	ROS_ERROR("You can enable automatic ASUS detection by setting 'asus_ip' to \"\"");
-	exit(1);
+	return 1;
   }
   if(!iface_up){
 	ROS_ERROR("The subnet does not appear to be active.");
-	exit(1);
+	return 1;
   }
-
+  return 0;
 }
 
 char configcmd[512];
 // void
-void configure_device(nex_config_t& param){
+int configure_device(nex_config_t& param){
   ROS_INFO("Configuring Receiver at %s...\n", param.csi_config.dev_ip.c_str());
   std::string iface;
   std::string cmd_output;
@@ -144,6 +142,7 @@ void configure_device(nex_config_t& param){
     
   }
   printf("done with config.\n");
+  return 0;
 }
 
 void parse_csi(unsigned char* data, size_t nbytes, const nex_config_t& param){
@@ -262,10 +261,9 @@ void parse_csi(unsigned char* data, size_t nbytes, const nex_config_t& param){
   if(out.seq != g_last_seq && g_mimo_channel.size() > 0){
 	new_csi = true;
   }
-
   if(new_csi){
-	publish_csi(g_mimo_channel);
-	g_mimo_channel.clear();
+    publish_csi(g_mimo_channel,param.csi_config.dev_ip);
+    g_mimo_channel.clear();
   }
   g_last_seq = out.seq;
   //save the currently extracted CSI
@@ -277,7 +275,7 @@ void parse_csi(unsigned char* data, size_t nbytes, const nex_config_t& param){
 
 void wiros_main(nex_config_t &param){
   //check if remote device is active.
-  contact_device(param);
+  if(contact_device(param)) return;
   //handle shutdown
   signal(SIGINT, handle_shutdown);
   
@@ -286,7 +284,7 @@ void wiros_main(nex_config_t &param){
   param.csi_config.beacon_mac_6 = (uint8_t)std::stoi(std::string(g_host_ip).erase(0,pos+1));
 
   //configure CSI collection on ASUS.
-  configure_device(param);
+  if(configure_device(param)) return;
 
   int sockfd, connfd;
   socklen_t len;
@@ -298,13 +296,13 @@ void wiros_main(nex_config_t &param){
   if (param.use_tcp_forward) {//forward over tcpdump-netcat
 	if ( (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
 	  perror("socket creation failed");
-	  exit(EXIT_FAILURE);
+	  return;
 	}
   }
   else{//forward over udp
     if ( (sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0 ) {
 	  perror("socket creation failed");
-	  exit(EXIT_FAILURE);
+	  return;
     }
 	struct timeval tv;
 	tv.tv_sec = 1;
@@ -334,7 +332,7 @@ void wiros_main(nex_config_t &param){
 			sizeof(servaddr)) < 0 )
 	{
 	  ROS_INFO("bind failed: %s", strerror(errno));
-	  exit(EXIT_FAILURE);
+	  return;
 	}
 
   size_t n;
@@ -360,4 +358,11 @@ void wiros_main(nex_config_t &param){
     exit(1);
   }
 
+}
+
+std::string mac_to_string(unsigned char const* source_mac)
+{
+  char source_mac_str[19];
+  sprintf(source_mac_str, "%.2hhx:%.2hhx:%.2hhx:%.2hhx:%.2hhx:%.2hhx", source_mac[0], source_mac[1], source_mac[2], source_mac[3], source_mac[4], source_mac[5]);
+  return std::string(source_mac_str);
 }

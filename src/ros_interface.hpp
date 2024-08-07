@@ -8,4 +8,4 @@
 #define ROS_WARN(...) printf(__VA_ARGS__)
 
 void ros_setup(void);
-void publish_csi(const std::vector<csi_instance> &channel);
+void publish_csi(const std::vector<csi_instance> &channel, std::string rx_ip);
