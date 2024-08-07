@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <signal.h>
 
 #include "nex_conf.hpp"
 #include "shell_utils.hpp"
@@ -17,7 +18,7 @@
 #define PORT 5500
 #define PORT_TCP 50005
 
-bool g_ok = true;
+volatile bool g_ok = true;
 //tracks our IP
 std::string g_host_ip = "";
 //The ASUS sends multiple packets for a given CSI measurement -
@@ -35,24 +36,7 @@ void contact_device(nex_config_t& params);
 std::array<uint8_t, CSI_BUF_SIZE> g_csi_buf;
 
 void handle_shutdown(int sig){
-  ROS_WARN("Shutting down.");
-  /**
-  if(cli_fp){
-	ROS_WARN("Closing tcpdump process");
-	pclose(cli_fp);
-  }
-  if(tx_fp){
-	ROS_WARN("Closing tx process");
-	pclose(tx_fp);
-	char killcmd[128];
-	
-	sprintf(killcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s killall send.sh", rx_pass.c_str(), rx_host.c_str(), rx_ip.c_str());
-	sh_exec(std::string(killcmd));
-  }
-  **/
-  ROS_WARN("Calling ros::shutdown()");
-  //ros::shutdown();
-  ROS_WARN("Done.");
+  g_ok  = false;
 }
 
 void contact_device(nex_config_t& params){
@@ -113,11 +97,12 @@ void contact_device(nex_config_t& params){
 
 }
 
-std::string configure_device(nex_config_t& param){
-  static char configcmd[512];
+char configcmd[512];
+// void
+void configure_device(nex_config_t& param){
   ROS_INFO("Configuring Receiver at %s...\n", param.csi_config.dev_ip.c_str());
-
   std::string iface;
+  std::string cmd_output;
   //reset iface
   if(param.csi_config.channel >= 32){
       iface = "eth6";
@@ -127,35 +112,38 @@ std::string configure_device(nex_config_t& param){
       iface = "eth5";
 	  param.csi_config.beacon_tx_streams = param.csi_config.beacon_tx_streams > 3 ? 3 : param.csi_config.beacon_tx_streams;
   }
-
+  
   sprintf(configcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s killall send.sh",
             param.csi_config.dev_password.c_str(), param.csi_config.dev_hostname.c_str(), param.csi_config.dev_ip.c_str());
   printf("---RUN---\n %s\n",configcmd);
-  printf("%s",sh_exec_block(configcmd).c_str());
+  printf("%s\n",sh_exec_block(configcmd).c_str());
   
 
     
   if(param.csi_config.rx_mac_filter.len > 1){
+    
 	sprintf(configcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/setup.sh %d %d 4 %.2hhx:%.2hhx:00:00:00:00 2>&1",
             param.csi_config.dev_password.c_str(), param.csi_config.dev_hostname.c_str(), param.csi_config.dev_ip.c_str(), param.csi_config.channel, param.csi_config.bw, param.csi_config.rx_mac_filter.mac[0],param.csi_config.rx_mac_filter.mac[1]);
+    
   }
   else{
 	sprintf(configcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/setup.sh %d %d 4 2>&1",             param.csi_config.dev_password.c_str(), param.csi_config.dev_hostname.c_str(), param.csi_config.dev_ip.c_str(), param.csi_config.channel, param.csi_config.bw);
   }
   printf("---RUN---\n %s\n",configcmd);
-  printf("%s",sh_exec_block(configcmd).c_str());
+  printf("%s\n",sh_exec_block(configcmd).c_str());
 
   if(param.csi_config.beacon_rate > 0) {
     printf("starting tx...\n");
-
+    
 	sprintf(configcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s \"/jffs/csi/send.sh %d %d %d %s 11 11 11 %x %x %x  2>&1 & \"",
             param.csi_config.dev_password.c_str(), param.csi_config.dev_hostname.c_str(), param.csi_config.dev_ip.c_str(), param.csi_config.bw, param.csi_config.beacon_tx_streams,
             (int)param.csi_config.beacon_rate*1000, iface.c_str(), param.csi_config.beacon_mac_4, param.csi_config.beacon_mac_5, param.csi_config.beacon_mac_6);
-	ROS_INFO("%s\n", configcmd);
 	ROS_WARN("Beaconing on 11:11:11:%x:%x:%x\n",param.csi_config.beacon_mac_4,param.csi_config.beacon_mac_5,param.csi_config.beacon_mac_6);
     printf("---RUN---\n %s\n",configcmd);
-    printf("%s",sh_exec_block(configcmd).c_str());
-  }  
+    printf("%s\n",sh_exec_block(configcmd).c_str());
+    
+  }
+  printf("done with config.\n");
 }
 
 void parse_csi(unsigned char* data, size_t nbytes, const nex_config_t& param){
@@ -287,38 +275,18 @@ void parse_csi(unsigned char* data, size_t nbytes, const nex_config_t& param){
 
 
 
-int main(int argc, char* argv[]){
-  //determine our hostname
-  std::string hostname = sh_exec_block("hostname");
-
-  
-  nex_config_t param = {
-  use_tcp_forward:false,
-  lock_topic:"/",
-  csi_config: {
-    channel: 36,
-    bw: 80,
-    beacon_rate:20,
-    beacon_mac_4:hostname[0],
-    beacon_mac_5:hostname[1],
-    beacon_mac_6:0,
-    beacon_tx_streams:4,
-    dev_ip:"192.168.44.4",
-    dev_password:"robot123!",
-    dev_hostname:"wcsng",
-    rx_mac_filter: mac_filter_t("*:*:*:*:*:*")
-  }
-  };
-
+void wiros_main(nex_config_t &param){
   //check if remote device is active.
   contact_device(param);
+  //handle shutdown
+  signal(SIGINT, handle_shutdown);
   
   //change last byte of beacon mac to reflect our IP.
   size_t pos = g_host_ip.rfind('.');
   param.csi_config.beacon_mac_6 = (uint8_t)std::stoi(std::string(g_host_ip).erase(0,pos+1));
 
   //configure CSI collection on ASUS.
-  configure_device(param).c_str();
+  configure_device(param);
 
   int sockfd, connfd;
   socklen_t len;
@@ -361,26 +329,26 @@ int main(int argc, char* argv[]){
   setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &yes, sizeof(int));
   setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
   setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &yes, sizeof(int));
-  printf("sock %u\n",sockfd);
   // Bind the socket with the server address
-  printf("Try bind\n");
   if ( bind(sockfd, (const struct sockaddr *)&servaddr,
 			sizeof(servaddr)) < 0 )
 	{
 	  ROS_INFO("bind failed: %s", strerror(errno));
 	  exit(EXIT_FAILURE);
 	}
-  printf("opened...\n");
 
   size_t n;
   //normal udp broadcast version, change to support tcp_forward.
   if(!param.use_tcp_forward){
-    while(g_ok){
+    while(1){
+      if(!g_ok){
+        break;
+      }
 	  if ((n = recvfrom(sockfd, g_csi_buf.data(), CSI_BUF_SIZE, 0, (struct sockaddr *)&cliaddr, &sockaddr_len)) == -1){
-		if(errno == ETIMEDOUT || errno == EAGAIN){
-		  continue;
+		if(!(errno == ETIMEDOUT || errno == EAGAIN || errno == EINTR)){
+          ROS_ERROR("Socket Error: %s", strerror(errno));
 		}
-		ROS_ERROR("Socket Error: %s", strerror(errno));
+        continue;
 	  }
 	  //	  ROS_INFO("%s", inet_ntoa(cliaddr.sin_addr));
 	  if(n > 0){
@@ -388,7 +356,7 @@ int main(int argc, char* argv[]){
 	  }
     }
   } else{
-    printf("TCP forwarding is unimplemented :( Ask william to implement it, it'll take like an hour.\n");
+    printf("TCP forwarding is unimplemented :( Ask william to implement it.\n");
     exit(1);
   }
 

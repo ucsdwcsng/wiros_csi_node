@@ -78,47 +78,4 @@ typedef struct nex_config{
 } nex_config_t;
 
 
-
-std::string apply_csi_config(csi_config_t conf){
-  std::string iface;
-  char configcmd[384];
-  std::string ret;
-  mac_filter_t filter(conf.rx_mac_filter);
-  bool configured = false;
-  std::string output;
-  if(conf.channel >= 32){
-      iface = "eth6";
-      if(conf.beacon_tx_streams > 4) conf.beacon_tx_streams = 4;
-  }
-  else{
-      iface = "eth5";
-      if(conf.beacon_tx_streams > 3) conf.beacon_tx_streams = 3;
-  }
-  
-  if(filter.len > 1){
-	sprintf(configcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/setup.sh %d %d 4 %.2hhx:%.2hhx:00:00:00:00 2>&1",
-            conf.dev_password.c_str(), conf.dev_hostname.c_str(), conf.dev_ip.c_str(), conf.channel, conf.bw, conf.rx_mac_filter.mac[0],conf.rx_mac_filter.mac[1]);
-  }
-  else{
-	sprintf(configcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/setup.sh %d %d 4 2>&1", conf.dev_password.c_str(), conf.dev_hostname.c_str(), conf.dev_ip.c_str(), conf.channel, conf.bw);
-  }
-
-  ret += "RUN: " + std::string(configcmd);
-  
-  do{
-    output = sh_exec_block(configcmd);
-    ROS_INFO("\n***\nSetup Output:\n\n%s\n***", output.c_str());
-    if(output.find("Permission denied") != std::string::npos){
-      ROS_ERROR("A device was found at %s, but it refused SSH access.\nPlease check the 'asus_pwd' param and ensure it is set to the device's password.\nCurrent passsword: %s\nThis may also be caused by setup scripts not having the correct permissions set.",conf.dev_ip.c_str(),conf.dev_password.c_str());
-      exit(EXIT_FAILURE);
-    } else if(output.find("Connection refused") != std::string::npos){
-      ROS_INFO("Waiting 5 seconds and retrying...");
-      sleep(5);
-    } else {
-      configured = true;
-    }
-  } while(!configured);
-  
-  ret += "RESULT: " + output;
-  return ret;
-}
+void wiros_main(nex_config_t &param);

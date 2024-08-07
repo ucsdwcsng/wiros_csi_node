@@ -4,40 +4,69 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
+#include "nex_conf.hpp"
 
 using namespace std::chrono_literals;
 
 /* This example creates a subclass of Node and uses std::bind() to register a
 * member function as a callback from the timer. */
 
-class MinimalPublisher : public rclcpp::Node
+class csi_node : public rclcpp::Node
 {
   public:
-    MinimalPublisher()
-    : Node("minimal_publisher"), count_(0)
+    csi_node()
+    : Node("minimal_publisher")
     {
-      publisher_ = this->create_publisher<std_msgs::msg::String>("topic", 10);
-      timer_ = this->create_wall_timer(
-      500ms, std::bind(&MinimalPublisher::timer_callback, this));
+      publisher_ = this->create_publisher<rf_msgs::msg::Wifi>("/csi", 10);
+      //determine our hostname
+      std::string hostname = sh_exec_block("hostname");
+
+      nex_config_t param = {
+      use_tcp_forward:false,
+      lock_topic:"/",
+      csi_config: {
+        channel: 36,
+        bw: 80,
+        beacon_rate:20,
+        beacon_mac_4:(uint8_t)hostname[0],
+        beacon_mac_5:(uint8_t)hostname[1],
+        beacon_mac_6:0,
+        beacon_tx_streams:4,
+        dev_ip:"192.168.44.4",
+        dev_password:"robot123!",
+        dev_hostname:"wcsng",
+        rx_mac_filter: mac_filter_t("*:*:*:*:*:*")
+      }
+      };
+      wiros_main(param);
     }
 
-  private:
-    void timer_callback()
-    {
-      auto message = std_msgs::msg::String();
-      message.data = "Hello, world! " + std::to_string(count_++);
-      RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message.data.c_str());
-      publisher_->publish(message);
+  void publish_csi(const std::vector<csi_instance> &channel){
+    rf_msgs::msg::Wifi msg;
+    if (channel.size() == 0){
+      return;
     }
-    rclcpp::TimerBase::SharedPtr timer_;
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher_;
-    size_t count_;
+    msg.ap_id = 0;
+    msg.txmac = std::vector<uint8_t>(&channel[0].source_mac[0], &channel[0].source_mac[6]);
+    publisher_->publish(msg);
+    printf("PUB\n");
+  }
+  
+  private:
+  rclcpp::Publisher<rf_msgs::msg::Wifi>::SharedPtr publisher_;
 };
+
+std::unique_ptr<csi_node> g_node;
 
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<MinimalPublisher>());
+  g_node = std::make_unique<csi_node>();
+  g_node.release();
   rclcpp::shutdown();
   return 0;
+}
+
+void publish_csi(const std::vector<csi_instance> &channel){
+  g_node->publish_csi(channel);
 }

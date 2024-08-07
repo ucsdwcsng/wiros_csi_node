@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.3)
-project(wiros_csi_node)
+cmake_minimum_required(VERSION 3.8)
+project(wiros_csi)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++20 -g)
@@ -14,8 +14,6 @@ IF(CMAKE_BUILD_TYPE MATCHES DEBUG)
     add_compile_definitions(DEBUG_CSI)
 ENDIF(CMAKE_BUILD_TYPE MATCHES DEBUG)
 
-
-message("Targeting ROS2")
 find_package(ament_cmake REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(rf_msgs REQUIRED)
@@ -32,10 +30,14 @@ include_directories(
         rf_msgs
 )
 
-add_executable(csi_node src/shell_utils.cpp src/ros2_interface.cpp)
+add_executable(csi_node src/shell_utils.cpp src/ros2_interface.cpp src/wiros_csi_main.cpp)
 ament_target_dependencies(csi_node rclcpp std_msgs rf_msgs)
 install(TARGETS
   csi_node
   DESTINATION lib/${PROJECT_NAME})
+#install launch files
+install(DIRECTORY
+  launch
+  DESTINATION share/${PROJECT_NAME})
 
 ament_package()
