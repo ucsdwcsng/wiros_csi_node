@@ -71,13 +71,13 @@ int contact_device(nex_config_t& params){
     std::string target;
     while(getline(nmap, target, ' ')){
       if (target.rfind(subnet, 0) == 0){
-	std::string temp_ip = target.substr(0, target.find("\n"));
-	if(temp_ip != g_host_ip){
-	  params.csi_config.dev_ip = temp_ip;
-	  size_t pos = g_host_ip.rfind('.');
-	  params.csi_config.beacon_mac_6 = (uint8_t)std::stoi(std::string(g_host_ip).erase(0,pos+1));
-	  ROS_INFO("Found AP at %s",temp_ip.c_str());
-	}
+        std::string temp_ip = target.substr(0, target.find("\n"));
+        if(temp_ip != g_host_ip){
+          params.csi_config.dev_ip = temp_ip;
+          size_t pos = g_host_ip.rfind('.');
+          params.csi_config.beacon_mac_6 = (uint8_t)std::stoi(std::string(g_host_ip).erase(0,pos+1));
+          ROS_INFO("Found AP at %s",temp_ip.c_str());
+        }
       }
     }
   }
@@ -90,10 +90,6 @@ int contact_device(nex_config_t& params){
 	ROS_ERROR("The host at %s did not respond to a ping.", params.csi_config.dev_ip.c_str());
 	ROS_ERROR("This is probably because the 'asus_ip' param is setup to the incorrect value.");
 	ROS_ERROR("You can enable automatic ASUS detection by setting 'asus_ip' to \"\"");
-	return 1;
-  }
-  if(!iface_up){
-	ROS_ERROR("The subnet does not appear to be active.");
 	return 1;
   }
   return 0;
