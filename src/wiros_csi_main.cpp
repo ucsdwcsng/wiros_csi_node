@@ -46,6 +46,8 @@ int contact_device(nex_config_t& params){
 	sprintf(subnet, "%s.%s.%s.", ip_match[1].str().c_str(), ip_match[2].str().c_str(), ip_match[3].str().c_str());
 	if(ip_match[4]=="*"){  
 	  scan=true;
+	} else {
+	  params.csi_config.beacon_mac_6 = (uint8_t)std::stoi(ip_match[4].str());
 	}
   }
   else{
@@ -56,28 +58,30 @@ int contact_device(nex_config_t& params){
   std::string IP;
   bool iface_up = false;
   while(getline(IPs, IP, ' ')){
-	if (IP.rfind(subnet, 0) == 0) {
-	  g_host_ip = IP;
-	  iface_up = true;
-
-	  if(scan){
-		char cmd[256];
-		ROS_INFO("Scanning for ASUS routers...");
-		sprintf(cmd, "nmap -sP %s0/24", subnet);
-		ROS_INFO("%s", cmd);
-		std::stringstream nmap(sh_exec_block(cmd));
-		std::string target;
-		while(getline(nmap, target, ' ')){
-		  if (target.rfind(subnet, 0) == 0){
-			std::string temp_ip = target.substr(0, target.find("\n"));
-			if(temp_ip != g_host_ip){
-              params.csi_config.dev_ip = temp_ip;
-			}
-		  }
-		}
-	  }
-	}
+    if (IP.rfind(subnet, 0) == 0) {
+      g_host_ip = IP;
+    }
   }
+  if(scan){
+    char cmd[256];
+    ROS_INFO("Scanning for ASUS routers...");
+    sprintf(cmd, "nmap -sP %s0/24", subnet);
+    ROS_INFO("%s", cmd);
+    std::stringstream nmap(sh_exec_block(cmd));
+    std::string target;
+    while(getline(nmap, target, ' ')){
+      if (target.rfind(subnet, 0) == 0){
+	std::string temp_ip = target.substr(0, target.find("\n"));
+	if(temp_ip != g_host_ip){
+	  params.csi_config.dev_ip = temp_ip;
+	  size_t pos = g_host_ip.rfind('.');
+	  params.csi_config.beacon_mac_6 = (uint8_t)std::stoi(std::string(g_host_ip).erase(0,pos+1));
+	  ROS_INFO("Found AP at %s",temp_ip.c_str());
+	}
+      }
+    }
+  }
+  
   char setupcmd[512];
   sprintf(setupcmd, "ping -c 3 -i 0.3 %s", params.csi_config.dev_ip.c_str());
   std::string ping_result = sh_exec_block(setupcmd);
@@ -279,10 +283,6 @@ void wiros_main(nex_config_t &param){
   //handle shutdown
   signal(SIGINT, handle_shutdown);
   
-  //change last byte of beacon mac to reflect our IP.
-  size_t pos = g_host_ip.rfind('.');
-  param.csi_config.beacon_mac_6 = (uint8_t)std::stoi(std::string(g_host_ip).erase(0,pos+1));
-
   //configure CSI collection on ASUS.
   if(configure_device(param)) return;
 
