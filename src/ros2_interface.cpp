@@ -16,9 +16,16 @@ class csi_node : public rclcpp::Node
 {
   public:
     csi_node()
-    : Node("minimal_publisher")
+    : Node("wiros_csi_node")
     {
       publisher_ = this->create_publisher<rf_msgs::msg::Wifi>("csi", 10);
+      this->declare_parameter("asus_host", rclcpp::PARAMETER_STRING);
+      this->declare_parameter("asus_pwd", rclcpp::PARAMETER_STRING);
+      this->declare_parameter("asus_ip", rclcpp::PARAMETER_STRING);
+      this->declare_parameter("channel", rclcpp::PARAMETER_INTEGER);
+      this->declare_parameter("bw", rclcpp::PARAMETER_INTEGER);
+      this->declare_parameter("mac_filter", rclcpp::PARAMETER_STRING);
+      this->declare_parameter("beacon_rate", rclcpp::PARAMETER_INTEGER);
     }
 
   void run(void){
@@ -27,18 +34,34 @@ class csi_node : public rclcpp::Node
       nex_config_t param = {
       use_tcp_forward:false,
       lock_topic:"/",
+      /**
       csi_config: {
-        channel: 36,
-        bw: 80,
-        beacon_rate:20,
+        channel: (int)this->get_parameter("channel").as_int(),
+        bw: (int)this->get_parameter("bw").as_int(),
+        beacon_rate:(double)this->get_parameter("beacon_rate").as_int(),
         beacon_mac_4:(uint8_t)hostname[0],
         beacon_mac_5:(uint8_t)hostname[1],
         beacon_mac_6:0,
         beacon_tx_streams:4,
-        dev_ip:"192.168.44.4",
+        dev_ip:this->get_parameter("asus_ip").as_string(),
+        dev_password:this->get_parameter("asus_pwd").as_string(),
+        dev_hostname:this->get_parameter("asus_host").as_string(),
+        rx_mac_filter: mac_filter_t(this->get_parameter("mac_filter").as_string())
+      }
+      };
+      **/
+      csi_config: {
+        channel: (int)161,
+        bw: (int)20,
+        beacon_rate:0,
+        beacon_mac_4:(uint8_t)hostname[0],
+        beacon_mac_5:(uint8_t)hostname[1],
+        beacon_mac_6:0,
+        beacon_tx_streams:4,
+        dev_ip:"192.168.44.2",
         dev_password:"robot123!",
         dev_hostname:"wcsng",
-        rx_mac_filter: mac_filter_t("*:*:*:*:*:*")
+        rx_mac_filter: mac_filter_t("AC:37:*:*:*:*")
       }
       };
       wiros_main(param);
