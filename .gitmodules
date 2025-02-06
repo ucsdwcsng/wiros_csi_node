@@ -1,0 +1,3 @@
+[submodule "nexmon_firmware/nexmon_csi"]
+	path = nexmon_firmware/nexmon_csi
+	url = https://github.com/seemoo-lab/nexmon_csi.git
