@@ -31,7 +31,7 @@ beacon = 200.0
 iface = ""
 tx_nss = 4
 filter = []
-use_software_mac_filter = True
+use_software_mac_filter = False
 lock_topic = ""
 csi_buf = bytearray(CSI_BUF_SIZE)
 csi_data = bytearray(CSI_BUF_SIZE)
@@ -87,6 +87,7 @@ class CsiInstance:
         self.ap_id = 0
         self.mcs = 0
         self.rx_id = 0
+        self.stamp = None
 
 
 # CSI UDP frame
@@ -191,6 +192,7 @@ def parse_csi(data: bytes, nbytes: int):
     out.n_cols = 4
     out.ap_id = 0
     out.rx_id = rx_ip
+    out.stamp = time.time_ns()
 
     if out.bw == 0x4:
         out.bw = 80
@@ -232,10 +234,10 @@ def parse_csi(data: bytes, nbytes: int):
 def publish_csi(channel_current: List[CsiInstance]):
     print("Publishing CSI data...")
     for csi in channel_current:
-        msg = f"MAC: {csi.source_mac}, RSSI: {csi.rssi}, Channel: {csi.channel}, BW: {csi.bw}, csi_i: {csi.csi_i}, csi_r: {csi.csi_r}, fc: {csi.fc}, n_sub: {csi.n_sub}, tx: {csi.tx}, n_rows: {csi.n_rows}, n_cols:{csi.n_cols}, ap_id: {csi.ap_id}, mcs: {csi.mcs}, rx_id: {csi.rx_id}"
+        msg = f"MAC: {csi.source_mac}, RSSI: {csi.rssi}, Channel: {csi.channel}, BW: {csi.bw}, csi_i: {csi.csi_i}, csi_r: {csi.csi_r}, fc: {csi.fc}, n_sub: {csi.n_sub}, tx: {csi.tx}, n_rows: {csi.n_rows}, n_cols:{csi.n_cols}, ap_id: {csi.ap_id}, mcs: {csi.mcs}, rx_id: {csi.rx_id}, stamp:{csi.stamp}"
         CLIENT.publish(topic, msg)
         print(
-            f"MAC: {csi.source_mac}, RSSI: {csi.rssi}, Channel: {csi.channel}, BW: {csi.bw}, csi_i: {csi.csi_i}, csi_r: {csi.csi_r}, fc: {csi.fc}, n_sub: {csi.n_sub}, tx: {csi.tx}, n_rows: {csi.n_rows}, n_cols:{csi.n_cols}, ap_id: {csi.ap_id}, mcs: {csi.mcs}, rx_id: {csi.rx_id}"
+            f"MAC: {csi.source_mac}, RSSI: {csi.rssi}, Channel: {csi.channel}, BW: {csi.bw}, csi_i: {csi.csi_i}, csi_r: {csi.csi_r}, fc: {csi.fc}, n_sub: {csi.n_sub}, tx: {csi.tx}, n_rows: {csi.n_rows}, n_cols:{csi.n_cols}, ap_id: {csi.ap_id}, mcs: {csi.mcs}, rx_id: {csi.rx_id}, stamp:{csi.stamp}"
         )
 
 
