@@ -1,0 +1,32 @@
+{
+    "login": [
+        {
+            "host": "wiloc",
+            "host_ip": "192.168.48.6",
+            "host_passwd": "robot_wireless"
+        }
+    ],
+
+    "channel_params": [
+        {
+            "channel": 157,
+            "bw": 40
+        }
+    ],
+
+    "packet_params": [
+        {
+            "mac_filter": [0],
+            "length": 1,
+            "beacon_rate": 200.0,
+            "beacon_tx_nss": 4
+        }
+    ],
+
+    "broadcast": [
+        {
+            "tcp_forward": "false"
+        }
+    ]
+
+}
