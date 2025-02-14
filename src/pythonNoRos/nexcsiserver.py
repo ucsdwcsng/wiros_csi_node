@@ -2,11 +2,13 @@ import socket
 import struct
 import subprocess
 import re
+import json
 import time
 import signal
 import sys
 import random
 import string
+import ast
 from paho.mqtt import client as mqtt_client
 import time
 from typing import List, Tuple
@@ -38,6 +40,17 @@ csi_data = bytearray(CSI_BUF_SIZE)
 csi_r_out = None
 csi_i_out = None
 csi_size = 0
+
+
+def string_to_bool(string):
+    string = string.lower()
+    if string == "true":
+        return True
+    elif string == "false":
+        return False
+    else:
+        raise ValueError("Invalid input: string must be 'true' or 'false'")
+
 
 address = "128.205.218.189"
 mqtt_port = 1883
@@ -103,6 +116,29 @@ class CsiUdpFrame:
         self.chanspec = 0
         self.chip = 0
 
+
+with open("src/pythonNoRos/config.json", "r") as file:
+    config_data = json.load(file)
+
+    rx_ip = config_data["login"][0]["host_ip"]
+    rx_host = config_data["login"][0]["host"]
+    rx_pass = config_data["login"][0]["host_passwd"]
+
+    ch = int(config_data["channel_params"][0]["channel"])
+    bw = int(config_data["channel_params"][0]["bw"])
+
+    use_software_mac_filter = string_to_bool(
+        config_data["packet_params"][0]["use_software_mac_filter"]
+    )
+    beacon = float(config_data["packet_params"][0]["beacon_rate"])
+    tx_nss = int(config_data["packet_params"][0]["beacon_tx_nss"])
+
+    use_tcp = string_to_bool(config_data["broadcast"][0]["tcp_forward"])
+
+    mac_filter = ast.literal_eval(config_data["packet_params"][0]["mac_filter"])
+    length = int(config_data["packet_params"][0]["length"])
+
+    filter = MacFilter(mac_filter, length)
 
 # Execute a shell command and return the output
 def sh_exec_block(cmd: str) -> str:
@@ -249,18 +285,7 @@ def main():
     signal.signal(signal.SIGINT, handle_shutdown)
 
     # Setup parameters (replace with your own configuration)
-    rx_ip = "192.168.48.6"
-    rx_pass = "robot_wireless"
-    rx_host = "wiloc"
-    ch = 157
-    bw = 80
-    beacon = 200.0
-    tx_nss = 4
-    iface = "eth5"
-    filter = MacFilter([0x0], 1)
-    use_tcp = False
-    no_config = False
-    lock_topic = ""
+    iface = "eth0"
 
     # Configure the router
     if not no_config:
