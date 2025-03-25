@@ -32,20 +32,21 @@ class csi_node : public rclcpp::Node
       //determine our hostname
       std::string hostname = sh_exec_block("hostname");
       nex_config_t param = {
-      use_tcp_forward:false,
-      lock_topic:"/",
-      csi_config: {
-        channel: (int)this->get_parameter("channel").as_int(),
-        bw: (int)this->get_parameter("bw").as_int(),
-        beacon_rate:(double)this->get_parameter("beacon_rate").as_int(),
-        beacon_mac_4:(uint8_t)hostname[0],
-        beacon_mac_5:(uint8_t)hostname[1],
-        beacon_mac_6:0,
-        beacon_tx_streams:4,
-        dev_ip:this->get_parameter("asus_ip").as_string(),
-        dev_password:this->get_parameter("asus_pwd").as_string(),
-        dev_hostname:this->get_parameter("asus_host").as_string(),
-        rx_mac_filter: mac_filter_t(this->get_parameter("mac_filter").as_string())
+        .use_tcp_forward=false,
+        .lock_topic="/",
+        .csi_config= {
+          .channel= (int)this->get_parameter("channel").as_int(),
+          .bw= (int)this->get_parameter("bw").as_int(),
+          .beacon_rate=(double)this->get_parameter("beacon_rate").as_int(),
+          .beacon_mac_4=(uint8_t)hostname[0],
+          .beacon_mac_5=(uint8_t)hostname[1],
+          .beacon_mac_6=0,
+          .beacon_tx_streams=4,
+          .dev_ip=this->get_parameter("asus_ip").as_string(),
+          .dev_password=this->get_parameter("asus_pwd").as_string(),
+          .dev_hostname=this->get_parameter("asus_host").as_string(),
+          .rx_mac_filter= mac_filter_t(this->get_parameter("mac_filter").as_string())
+        }
       };
 
       wiros_main(param);
