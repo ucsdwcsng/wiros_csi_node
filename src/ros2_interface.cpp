@@ -34,7 +34,6 @@ class csi_node : public rclcpp::Node
       nex_config_t param = {
       use_tcp_forward:false,
       lock_topic:"/",
-      /**
       csi_config: {
         channel: (int)this->get_parameter("channel").as_int(),
         bw: (int)this->get_parameter("bw").as_int(),
@@ -47,23 +46,8 @@ class csi_node : public rclcpp::Node
         dev_password:this->get_parameter("asus_pwd").as_string(),
         dev_hostname:this->get_parameter("asus_host").as_string(),
         rx_mac_filter: mac_filter_t(this->get_parameter("mac_filter").as_string())
-      }
       };
-      **/
-      csi_config: {
-        channel: (int)161,
-        bw: (int)20,
-        beacon_rate:0,
-        beacon_mac_4:(uint8_t)hostname[0],
-        beacon_mac_5:(uint8_t)hostname[1],
-        beacon_mac_6:0,
-        beacon_tx_streams:4,
-        dev_ip:"192.168.44.2",
-        dev_password:"robot123!",
-        dev_hostname:"wcsng",
-        rx_mac_filter: mac_filter_t("AC:37:*:*:*:*")
-      }
-      };
+
       wiros_main(param);
   }
 
