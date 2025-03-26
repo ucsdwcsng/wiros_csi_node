@@ -3,10 +3,11 @@
 #include <vector>
 #include "nex_data.hpp"
 #ifdef WIROS_ROS2
-#define ROS_INFO(...) printf(__VA_ARGS__)
-#define ROS_ERROR(...) printf(__VA_ARGS__)
-#define ROS_FATAL(...) printf(__VA_ARGS__)
-#define ROS_WARN(...) printf(__VA_ARGS__)
+#include "ros2_interface.hpp"
+#define ROS_INFO(...) RCLCPP_INFO(g_node->get_logger(), __VA_ARGS__)
+#define ROS_ERROR(...) RCLCPP_ERROR(g_node->get_logger(), __VA_ARGS__)
+#define ROS_FATAL(...) RCLCPP_FATAL(g_node->get_logger(), __VA_ARGS__)
+#define ROS_WARN(...) RCLCPP_WARN(g_node->get_logger(),__VA_ARGS__)
 #else
 #include "ros/ros.h"
 #endif

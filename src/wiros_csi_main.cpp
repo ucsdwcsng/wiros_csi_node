@@ -113,8 +113,8 @@ int configure_device(nex_config_t& param){
   
   sprintf(configcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s killall send.sh",
             param.csi_config.dev_password.c_str(), param.csi_config.dev_hostname.c_str(), param.csi_config.dev_ip.c_str());
-  printf("---RUN---\n %s\n",configcmd);
-  printf("%s\n",sh_exec_block(configcmd).c_str());
+  ROS_INFO("---RUN---\n %s\n",configcmd);
+  ROS_INFO("%s\n",sh_exec_block(configcmd).c_str());
   
 
     
@@ -127,21 +127,21 @@ int configure_device(nex_config_t& param){
   else{
 	sprintf(configcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/setup.sh %d %d 4 2>&1",             param.csi_config.dev_password.c_str(), param.csi_config.dev_hostname.c_str(), param.csi_config.dev_ip.c_str(), param.csi_config.channel, param.csi_config.bw);
   }
-  printf("---RUN---\n %s\n",configcmd);
-  printf("%s\n",sh_exec_block(configcmd).c_str());
+  ROS_INFO("---RUN---\n %s\n",configcmd);
+  ROS_INFO("%s\n",sh_exec_block(configcmd).c_str());
 
   if(param.csi_config.beacon_rate > 0) {
-    printf("starting tx...\n");
+    ROS_INFO("starting tx...\n");
     
 	sprintf(configcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s \"/jffs/csi/send.sh %d %d %d %s 11 11 11 %x %x %x  2>&1 & \"",
             param.csi_config.dev_password.c_str(), param.csi_config.dev_hostname.c_str(), param.csi_config.dev_ip.c_str(), param.csi_config.bw, param.csi_config.beacon_tx_streams,
             (int)param.csi_config.beacon_rate*1000, iface.c_str(), param.csi_config.beacon_mac_4, param.csi_config.beacon_mac_5, param.csi_config.beacon_mac_6);
 	ROS_WARN("Beaconing on 11:11:11:%x:%x:%x\n",param.csi_config.beacon_mac_4,param.csi_config.beacon_mac_5,param.csi_config.beacon_mac_6);
-    printf("---RUN---\n %s\n",configcmd);
-    printf("%s\n",sh_exec_block(configcmd).c_str());
+    ROS_INFO("---RUN---\n %s\n",configcmd);
+    ROS_INFO("%s\n",sh_exec_block(configcmd).c_str());
     
   }
-  printf("done with config.\n");
+  ROS_INFO("done with config.\n");
   return 0;
 }
 
@@ -262,6 +262,7 @@ void parse_csi(unsigned char* data, size_t nbytes, const nex_config_t& param){
 	new_csi = true;
   }
   if(new_csi){
+    ROS_INFO("CSI %s", mac_to_string(out.source_mac).c_str());
     publish_csi(g_mimo_channel,param.csi_config.dev_ip);
     g_mimo_channel.clear();
   }
@@ -346,11 +347,12 @@ void wiros_main(nex_config_t &param){
 	  }
 	  //	  ROS_INFO("%s", inet_ntoa(cliaddr.sin_addr));
 	  if(n > 0){
+        
 		parse_csi(g_csi_buf.data(), n,param);
 	  }
     }
   } else{
-    printf("TCP forwarding is unimplemented :( Ask william to implement it.\n");
+    ROS_INFO("TCP forwarding is unimplemented :( Ask william to implement it.\n");
     exit(1);
   }
 

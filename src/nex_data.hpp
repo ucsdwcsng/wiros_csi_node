@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <cstdlib>
+#include <string>
 
 //111111 - exponent of 
 const uint32_t e_mask = (1<<6)-1;

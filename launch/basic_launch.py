@@ -10,10 +10,10 @@ def generate_launch_description():
             parameters = [{
                 'asus_host': 'wcsng',
                 'asus_pwd': 'robot123!',
-                'asus_ip': '192.168.44.1',
+                'asus_ip': '192.168.44.123',
                 'channel': 157,
                 'bw': 20,
-                'mac_filter': "AC:37:*:*:*:*",
+                'mac_filter': "*:*:*:*:*:*",
                 'beacon_rate': 0,
                 
                 

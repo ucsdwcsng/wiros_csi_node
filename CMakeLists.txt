@@ -30,7 +30,7 @@ include_directories(
         rf_msgs
 )
 
-add_executable(csi_node src/shell_utils.cpp src/ros2_interface.cpp src/wiros_csi_main.cpp)
+add_executable(csi_node src/shell_utils.cpp src/ros2_interface.cpp src/wiros_csi_main.cpp src/nex_conf.cpp)
 ament_target_dependencies(csi_node rclcpp std_msgs rf_msgs)
 install(TARGETS
   csi_node
