@@ -45,7 +45,7 @@ fi
 
 /usr/sbin/wl -i ${IFACE} up
 /usr/sbin/wl -i ${IFACE} radio on
-/usr/sbin/wl -i ${IFACE} country UG
+/usr/sbin/wl -i ${IFACE} country US
 chspec=$(/usr/sbin/wl -i ${IFACE} chanspec ${CH}/${BW} | tr ' ' '\n' | grep "0x" | tr -d '\n')
 /usr/sbin/wl -i ${IFACE} monitor 1
 /sbin/ifconfig ${IFACE} up

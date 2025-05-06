@@ -6,7 +6,6 @@ if [ -e "/tmp/home/root/reload.txt" ];
 then
 	echo "Device has already reloaded"
 	cat /tmp/home/root/reload.txt
-	exit 0
 else
 	echo "reloaded" >> /tmp/home/root/reload.txt
 fi

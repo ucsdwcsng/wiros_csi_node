@@ -1,2 +1,4 @@
 .idea/
+.env
+.json
 cmake_build_debug/
