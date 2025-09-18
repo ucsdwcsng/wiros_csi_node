@@ -41,6 +41,37 @@ The project consists of a core node which interacts with the ASUS router via eth
 
 ### Step 2: Installing the ROS package
 
+This package has recently been migrated to ROS2, but I have left in support for ROS1 for use on older machines. 
+
+#### ROS2
+
+- If you do not already have a colcon workspace:
+```
+cd ~ && mkdir -p wifi_ws/src && cd wifi_ws
+```
+
+- Enter the source folder and clone this repository:
+```
+cd src && git clone git@github.com:ucsdwcsng/wiros_csi_node.git
+```
+
+- Install the [rf\_msgs](https://github.com/ucsdwcsng/rf_msgs) dependency to your source folder (Adds ROS messages for CSI information)
+```
+git clone git@github.com:ucsdwcsng/rf_msgs.git
+```
+
+- Build and install the node
+```
+colcon build --symlink-install
+```
+
+- Remember to add the setup script to your .bashrc:
+```
+echo "source ~/wifi_ws/install/setup.bash" >> ~/.bashrc
+```
+
+#### ROS1
+
 - If you do not already have a catkin workspace:
 ```
 cd ~ && mkdir -p wifi_ws/src && cd wifi_ws && catkin init
@@ -54,6 +85,14 @@ cd src && git clone git@github.com:ucsdwcsng/wiros_csi_node.git
 - Install the [rf\_msgs](https://github.com/ucsdwcsng/rf_msgs) dependency to your source folder (Adds ROS messages for CSI information)
 ```
 git clone git@github.com:ucsdwcsng/rf_msgs.git
+```
+
+- Replace the ROS2 build files with their ROS1 equivalents
+```
+mv wiros_csi_node/CMakeLists_ROS1.txt wiros_csi_node/CMakeLists.txt
+mv wiros_csi_node/package_ROS1.xml wiros_csi_node/package.xml
+mv rf_msgs/CMakeLists_ROS1.txt rf_msgs/CMakeLists.txt
+mv rf_msgs/package_ROS1.xml rf_msgs/package.xml
 ```
 
 - Build the node
@@ -83,11 +122,11 @@ sshpass -p PASSWORD ssh USERNAME@IP chmod +x /jffs/csi/*.sh
 
 ## Usage Instructions
 
-On a high level, when you start `csi_node`, it will attempt to log into the AP and set it to monitor mode. Any packets the AP sees will then be sent over ethernet to the node, where they are converted to ROS message format. While the node can be started with `rosrun`, we highly recommend using a roslaunch file due to the number of parameters which need to be set to ensure you get the data that you want.
+On a high level, when you start `csi_node`, it will attempt to log into the AP and set it to monitor mode. Any packets the AP sees will then be sent over ethernet to the node, where they are converted to ROS message format. While the node can be started with `ros2 run`, we highly recommend using a roslaunch file due to the number of parameters which need to be set to ensure you get the data that you want.
 
 ### Launch
 
-An example launch script is located in the `launch` folder:
+Example ROS1 and ROS2 launch scripts are located in the `launch` folder:
 ```
 launch/basic.launch
 ```
