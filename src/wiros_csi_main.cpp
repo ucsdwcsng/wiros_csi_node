@@ -120,12 +120,12 @@ int configure_device(nex_config_t& param){
     
   if(param.csi_config.rx_mac_filter.len > 1){
     
-	sprintf(configcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/setup.sh %d %d 4 %.2hhx:%.2hhx:00:00:00:00 2>&1",
-            param.csi_config.dev_password.c_str(), param.csi_config.dev_hostname.c_str(), param.csi_config.dev_ip.c_str(), param.csi_config.channel, param.csi_config.bw, param.csi_config.rx_mac_filter.mac[0],param.csi_config.rx_mac_filter.mac[1]);
+	sprintf(configcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/setup.sh %d %d %d %.2hhx:%.2hhx:00:00:00:00 2>&1",
+		param.csi_config.dev_password.c_str(), param.csi_config.dev_hostname.c_str(), param.csi_config.dev_ip.c_str(), param.csi_config.channel, param.csi_config.bw, param.csi_config.beacon_tx_streams, param.csi_config.rx_mac_filter.mac[0],param.csi_config.rx_mac_filter.mac[1]);
     
   }
   else{
-	sprintf(configcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/setup.sh %d %d 4 2>&1",             param.csi_config.dev_password.c_str(), param.csi_config.dev_hostname.c_str(), param.csi_config.dev_ip.c_str(), param.csi_config.channel, param.csi_config.bw);
+    sprintf(configcmd, "sshpass -p %s ssh -o strictHostKeyChecking=no %s@%s /jffs/csi/setup.sh %d %d %d 2>&1",             param.csi_config.dev_password.c_str(), param.csi_config.dev_hostname.c_str(), param.csi_config.dev_ip.c_str(), param.csi_config.channel, param.csi_config.bw, param.csi_config.beacon_tx_streams);
   }
   ROS_INFO("---RUN---\n %s\n",configcmd);
   ROS_INFO("%s\n",sh_exec_block(configcmd).c_str());
