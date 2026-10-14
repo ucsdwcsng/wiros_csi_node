@@ -7,12 +7,18 @@ CH=${1:?channel required}
 BW=${2:?bandwidth required}
 SS=${3:?spatial stream count required}
 MAC=${4:-}
-MIN_INTERVAL_MS=${5:-5}
+MIN_INTERVAL_MS=${5:-1}
 CORES=${6:-4}
 IFACE=${AP_CSI_INTERFACE:-eth6}
 WL=${AP_CSI_WL:-/usr/sbin/wl}
 NEXUTIL=${AP_CSI_NEXUTIL:-./nexutil}
 MAKECSIPARAMS=${AP_CSI_MAKECSIPARAMS:-./makecsiparams}
+
+# The native snapshot transport uses a fixed 1 ms immutable-buffer export tick.
+[ "$MIN_INTERVAL_MS" = 1 ] || {
+  echo "native AP snapshots require a 1 ms export tick" >&2
+  exit 2
+}
 
 cd "$(dirname "$0")"
 

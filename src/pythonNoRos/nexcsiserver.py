@@ -53,6 +53,16 @@ def assemble_csi_matrix(streams, n_tx, n_rx):
     if set(streams) != expected_streams:
         raise ValueError("incomplete CSI matrix; every configured stream is required")
     first = next(iter(streams.values()))
+    snapshot_fields = (
+        "capture_id", "capture_tsf_us", "snapshot_sequence", "sequence_control",
+        "n_tx_observed", "valid_tx_mask", "valid_rx_mask", "packet_bandwidth_mhz",
+        "phy_status", "snapshot_read_us", "coherent_snapshot",
+        "snapshot_protocol_version", "control_sideband", "valid_subcarrier_ranges",
+    )
+    for stream in streams.values():
+        for field in ("source_mac", "sequence", "bandwidth_mhz", "chip", *snapshot_fields):
+            if stream.get(field) != first.get(field):
+                raise ValueError("CSI matrix contains different capture metadata")
     n_subcarriers = first["n_subcarriers"]
     matrix_length = n_tx * n_rx * n_subcarriers
     csi_r = [0.0] * matrix_length
@@ -62,8 +72,6 @@ def assemble_csi_matrix(streams, n_tx, n_rx):
     for (tx, rx), stream in streams.items():
         if stream["n_subcarriers"] != n_subcarriers:
             raise ValueError("inconsistent subcarrier counts in CSI stream set")
-        if not 0 <= tx < n_tx or not 0 <= rx < n_rx:
-            raise ValueError("CSI stream index is outside the configured matrix")
         offset = (tx * n_rx + rx) * n_subcarriers
         csi_r[offset : offset + n_subcarriers] = (
             stream["csi_r"][half:] + stream["csi_r"][:half]
@@ -71,6 +79,12 @@ def assemble_csi_matrix(streams, n_tx, n_rx):
         csi_i[offset : offset + n_subcarriers] = (
             stream["csi_i"][half:] + stream["csi_i"][:half]
         )
+        if stream.get("coherent_snapshot"):
+            occupied = {index for start, stop in stream["valid_subcarrier_ranges"]
+                        for index in range(start, stop)}
+            for index in range(n_subcarriers):
+                if index not in occupied:
+                    csi_r[offset + index] = csi_i[offset + index] = 0.0
 
     payload = dict(first)
     payload.update(
@@ -85,6 +99,60 @@ def assemble_csi_matrix(streams, n_tx, n_rx):
     payload.pop("tx", None)
     payload.pop("rx", None)
     return payload
+
+
+
+class MatrixAssembler:
+    """Bounded per-capture assembly; reject duplicates and expire missing sets."""
+
+    def __init__(self, n_tx, n_rx, max_age_seconds=0.5, max_pending=128):
+        self.n_tx, self.n_rx = n_tx, n_rx
+        self.required = {(tx, rx) for tx in range(n_tx) for rx in range(n_rx)}
+        self.max_age = max_age_seconds
+        self.max_pending = max_pending
+        self.pending = {}
+        self.closed = {}
+        self.discarded = 0
+
+    def feed(self, payload, now=None):
+        now = time.monotonic() if now is None else now
+        for key, (started, _) in list(self.pending.items()):
+            if now - started >= self.max_age:
+                del self.pending[key]
+                self.discarded += 1
+        for key, ended in list(self.closed.items()):
+            if now - ended >= self.max_age:
+                del self.closed[key]
+        stream = (payload["tx"], payload["rx"])
+        if stream not in self.required:
+            return None
+        identity = ("snapshot", payload["capture_id"]) if payload.get("coherent_snapshot") else (
+            "legacy", payload["sequence"], payload["bandwidth_mhz"], payload["chip"]
+        )
+        key = (payload["source_mac"], *identity)
+        if key in self.closed:
+            return None
+        started, streams = self.pending.setdefault(key, (now, {}))
+        if stream in streams:
+            del self.pending[key]
+            self.closed[key] = now
+            self.discarded += 1
+            return None
+        streams[stream] = payload
+        if len(streams) == len(self.required):
+            del self.pending[key]
+            self.closed[key] = now
+            try:
+                return assemble_csi_matrix(streams, self.n_tx, self.n_rx)
+            except ValueError:
+                self.discarded += 1
+                return None
+        while len(self.pending) > self.max_pending:
+            self.pending.pop(next(iter(self.pending)))
+            self.discarded += 1
+        while len(self.closed) > self.max_pending * 2:
+            self.closed.pop(next(iter(self.closed)))
+        return None
 
 
 def load_config(path):
@@ -244,7 +312,7 @@ def run(config):
         actual_buffer,
     )
     qos = int(config["mqtt"].get("qos", 1))
-    pending_streams = {}
+    assembler = MatrixAssembler(n_tx, n_rx)
     datagram_count = 0
     accepted_stream_count = 0
     completed_matrix_count = 0
@@ -266,7 +334,7 @@ def run(config):
             datagram_count,
             accepted_stream_count,
             completed_matrix_count,
-            len(pending_streams),
+            len(assembler.pending),
             rejected_mac_count,
             rejected_stream_count,
             sorted(observed_macs),
@@ -304,25 +372,20 @@ def run(config):
                 rejected_mac_count += 1
                 log_stats_if_due()
                 continue
-            key = (payload["source_mac"], payload["sequence"])
-            streams = pending_streams.setdefault(key, {})
             stream_key = (payload["tx"], payload["rx"])
             observed_streams.add(stream_key)
-            if stream_key not in required_streams:
+            if stream_key not in required_streams or (
+                capture.get("require_coherent_snapshot", False)
+                and not payload.get("coherent_snapshot")
+            ):
                 rejected_stream_count += 1
                 log_stats_if_due()
                 continue
             accepted_stream_count += 1
-            streams[stream_key] = payload
-            if not required_streams.issubset(streams):
-                while len(pending_streams) > 128:
-                    pending_streams.pop(next(iter(pending_streams)))
+            payload = assembler.feed(payload)
+            if payload is None:
                 log_stats_if_due()
                 continue
-            payload = assemble_csi_matrix(
-                {key: streams[key] for key in required_streams}, n_tx, n_rx
-            )
-            del pending_streams[key]
             completed_matrix_count += 1
             publish_matrix(client, topic, payload, qos)
             log_stats_if_due()

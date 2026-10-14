@@ -1,0 +1,148 @@
+0a1,22
+> #include "spr.inc"
+> 
+> #define SPARE1 r58
+> #define SPARE2 r61
+> #define SHM_CSI_COLLECT [0xb80]
+> #define NSSMASK [0xb81]
+> #define COREMASK [0xb82]
+> #define APPLY_PKT_FILTER [0xb83]
+> #define PKT_FILTER_BYTE [0xb84]
+> #define N_CMP_SRC_MAC [0xb85]
+> #define CMP_SRC_MAC_0_0 0xb86
+> #define CSI_PENDING [0xba0]
+> #define CSI_ARM_READY [0xba3]
+> #define CSI_SERIAL [0xba4]
+> #define CSI_NSTS [0xba7]
+> #define CSI_PACKET_BW [0xba8]
+> #define CSI_TSF_LOW [0xba9]
+> #define CSI_TSF_HIGH [0xbaa]
+> #define CSI_BASE5 [0xbd6]
+> #define CSI_RX_GENERATION [0xbac]
+> #define CSI_CAPTURE_GENERATION [0xbab]
+> 
+3362a3385
+>  xadd CSI_RX_GENERATION, 1, CSI_RX_GENERATION
+4221a4245,4319
+> // Runs after stock receive-header DMA. ARM clears ARM_READY before claiming
+> // the latest eligible descriptor.
+>  xje SHM_CSI_COLLECT, 0, csi_filter_skip+
+>  xje CSI_ARM_READY, 0, csi_filter_skip+
+>  xjl [0x86e], 30, csi_filter_skip+
+>  jnzx 0, 0, [0x876], 0, csi_filter_skip+
+>  mov 0x310, SPARE1
+>  and [0x870], SPARE1, SPARE1
+>  xjne SPARE1, 0, csi_filter_skip+
+>  xje APPLY_PKT_FILTER, 0, csi_no_byte_filter+
+>  and [0x814], 0xff, SPARE1
+>  xjne SPARE1, PKT_FILTER_BYTE, csi_filter_skip+
+> csi_no_byte_filter:
+>  mov SPR_BASE5, CSI_BASE5
+>  mov N_CMP_SRC_MAC, SPARE2
+>  xje SPARE2, 0, csi_mac_match+
+>  mov CMP_SRC_MAC_0_0, SPR_BASE5
+> csi_mac_loop:
+>  mov [0,off5], SPARE1
+>  xjne SPARE1, [0x819], csi_next_mac+
+>  mov [1,off5], SPARE1
+>  xjne SPARE1, [0x81a], csi_next_mac+
+>  mov [2,off5], SPARE1
+>  xjne SPARE1, [0x81b], csi_next_mac+
+>  jmp csi_mac_match+
+> csi_next_mac:
+>  xadd SPR_BASE5, 3, SPR_BASE5
+>  xsub SPARE2, 1, SPARE2
+>  xjne SPARE2, 0, csi_mac_loop-
+>  jmp csi_filter_restore+
+> csi_mac_match:
+>  // PLCP occupies 0x811..0x813; the MAC header starts at 0x814.
+>  // Only SU VHT and ordinary HT MCS 0..31 have this table layout.
+>  and [0x870], 3, SPARE1
+>  xje SPARE1, 3, csi_vht+
+>  xje SPARE1, 2, csi_ht+
+>  xjne SPARE1, 1, csi_filter_restore+
+>  mov 1, CSI_NSTS
+>  mov 20, CSI_PACKET_BW
+>  jmp csi_mark_frame+
+> csi_vht:
+>  and [0x811], 0x3f0, SPARE1
+>  xje SPARE1, 0, csi_vht_su+
+>  xjne SPARE1, 0x3f0, csi_filter_restore+
+> csi_vht_su:
+>  sr [0x811], 10, SPARE1
+>  and SPARE1, 7, SPARE1
+>  xadd SPARE1, 1, SPARE1
+>  xjg SPARE1, 4, csi_filter_restore+
+>  mov SPARE1, CSI_NSTS
+>  and [0x811], 3, SPARE1
+>  xje SPARE1, 3, csi_filter_restore+
+>  mov 20, SPARE2
+>  sl SPARE2, SPARE1, CSI_PACKET_BW
+>  jmp csi_mark_frame+
+> csi_ht:
+>  and [0x811], 0x7f, SPARE1
+>  xjg SPARE1, 31, csi_filter_restore+
+>  sr SPARE1, 3, SPARE1
+>  xadd SPARE1, 1, SPARE1
+>  // HT STBC adds training streams.
+>  sr [0x812], 12, SPARE2
+>  and SPARE2, 3, SPARE2
+>  xadd SPARE1, SPARE2, SPARE1
+>  xjg SPARE1, 4, csi_filter_restore+
+>  mov SPARE1, CSI_NSTS
+>  mov 20, CSI_PACKET_BW
+>  jzx 0, 7, [0x811], 0, csi_mark_frame+
+>  mov 40, CSI_PACKET_BW
+> csi_mark_frame:
+>  calls csi_begin_snapshot
+> csi_filter_restore:
+>  mov CSI_BASE5, SPR_BASE5
+> csi_filter_skip:
+> 
+5130a5229,5238
+>  mov 0, [0xb80]
+>  mov 0, [0xba0]
+>  mov 0, [0xba3]
+>  mov 0, [0xba4]
+>  mov 0, [0xba7]
+>  mov 0, [0xba8]
+>  mov 0, [0xba9]
+>  mov 0, [0xbaa]
+>  mov 0, [0xbab]
+>  mov 0, [0xbac]
+6619a6728,6762
+> 
+> // ARM verifies this receive generation after suspending the MAC.
+> csi_begin_snapshot:
+>  mov 0, CSI_PENDING
+>  mov SPR_TSF_WORD0, CSI_TSF_LOW
+>  mov SPR_TSF_WORD1, CSI_TSF_HIGH
+>  xadd CSI_SERIAL, 1, CSI_SERIAL
+>  mov [0x819], SPARE1
+>  mov SPARE1, [0xbb0]
+>  mov [0x81a], SPARE1
+>  mov SPARE1, [0xbb1]
+>  mov [0x81b], SPARE1
+>  mov SPARE1, [0xbb2]
+>  mov [0x81f], SPARE1
+>  mov SPARE1, [0xbb3]
+>  mov [0x879], SPARE1
+>  mov SPARE1, [0xbb4]
+>  mov [0x870], SPARE1
+>  mov SPARE1, [0xbb5]
+>  mov [0x871], SPARE1
+>  mov SPARE1, [0xbb6]
+>  mov [0x872], SPARE1
+>  mov SPARE1, [0xbb7]
+>  mov [0x873], SPARE1
+>  mov SPARE1, [0xbb8]
+>  mov [0x874], SPARE1
+>  mov SPARE1, [0xbb9]
+>  mov [0x875], SPARE1
+>  mov SPARE1, [0xbba]
+>  mov CSI_RX_GENERATION, SPARE1
+>  mov SPARE1, CSI_CAPTURE_GENERATION
+>  // Publish only after all descriptor fields are written.
+>  mov 1, CSI_PENDING
+>  rets
+> 
