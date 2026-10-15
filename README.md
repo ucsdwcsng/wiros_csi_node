@@ -1,209 +1,304 @@
-# ROS Wrapper for Nexmon-CSI
+# CSI router and Python receiver
 
-This is a package for integrating the [nexmon-csi](https://github.com/seemoo-lab/nexmon_csi) platform for an [ASUS RT-AC86U AP](https://www.asus.com/us/networking-iot-servers/wifi-routers/asus-wifi-routers/rt-ac86u/) with ROS. It is currently tested on ROS kinetic, melodic, and noetic.
-
-< Go back to the [index page](https://github.com/ucsdwcsng/WiROS)
-
-## Motivation
-
-This tool provides open-source capability for collecting and processing CSI data in an online, scalable manner. While CSI extraction is a well studied topic, the integration of this CSI data into a larger sensor framework presents a lot of systems challenges for researchers. We leverage the robotics community's sensor management tool, [ROS](https://www.ros.org/), which provides a natural framework for measuring and collating CSI data from many access points, as well as running Wi-Fi sensing based localization and SLAM algorithms in real-time inside the ROS stack. This package provides ROS nodes to interface with the AC86U's CSI collector and publish data as a ROS message. We have also released a [package](https://github.com/ucsdwcsng/ros_bearing_sensor) which implements bearing-estimation algorithms on the collected CSI data.
+Collect Wi-Fi Channel State Information (CSI) with Nexmon-compatible ASUS
+RT-AC86U routers, decode it on paired Raspberry Pis, and publish matrices to
+[Server-central](https://github.com/WIRES-UB/Server-central) over MQTT.
+The supported workflow uses `src/pythonNoRos/nexcsiserver.py`.
 
 <p align="center"> <img src="docs/asus_array.jpg" height=30%, width=30%> </p>
-<p align="center"> RT_AC86u with array setup for signal Angle-of-Arrival sensing </p>
 
-## Installation and Setup
+## Architecture and requirements
 
-The project consists of a core node which interacts with the ASUS router via ethernet, and some secondary nodes which provide additional functionality. You need a computer running ROS with an ethernet port to run the platform, and an RT-AC86u AP. If you want to measure AoA, you will need to move the antennas' positions to create a useful array. We suggest removing the plastic case from the AP using the two screws on the back and placing the antennas in a permanent housing like as shown above.
-
-### Step 1: Setting up the Router
-
-- We need to be able to log into the AP in order to configure it. Connect to it over ethernet and it will prompt you with a setup webpage. If you bought a refurbished AP you may need to factory reset it using the small "Reset" button on the back. Press and hold this button for 5-10 seconds and the AP will reboot. You can then connect to it at [router.asus.com](http://router.asus.com) over Ethernet. If you can't access the router, you probably need to configure your ethernet interface to use DHCP.
-
-- In the setup menu for the AP:
-  - Select "Advanced Settings."
-  - Choose Operation Mode->Access Point(AP) mode->Manually Assign IP.
-  - Enter the IP address you want the AP to have (e.g. 192.168.43.xxx) . Subnet mask can be 255.255.255.0 and the default gateway and DNS servers can be 0.0.0.0.
-  - Tip: We recommend putting all of the APs on the same subnet. If you have a lot of APs in your experiment and don't want to keep track of which computer is connected to which AP, the node can be set to run nmap and automatically detect the IP of the AP it is connected to, assuming the subnet is known beforehand.
-  - You can set the network name and password, but this network will not be operational once the Nexmon firmware is flashed.
-  - Next, setup the login details for the AP. We recommend setting the same login and password for all the APs. This will be later needed to ssh into the AP.
-  - Once you enter these options, the AP will restart.
-- Next, we need to set up the ethernet setting on the laptop end. We suggest creating a new connection profile and giving yourself a static IP (e.g. 192.168.43.yyy). Remember to switch to this connection profile or you won't be able to connect to the AP.
-
-- Open a browser and enter the AP's IP (192.168.43.xxx) in the search bar. If this connection fails, confirm if you can ping the AP, check the ethernet connection setting, or reboot the AP.
-
-- Login to the AP, and navigate to `Administration->System->Service`.
-  - Set `Enable SSH` to `True` (Or `'LAN only'` on some versions).
-  - Set timeout to zero.
-  - Apply the settings and proceed to the next step.
-
-### Step 2: Installing the ROS package
-
-- If you do not already have a catkin workspace:
-
-```
-cd ~ && mkdir -p wifi_ws/src && cd wifi_ws && catkin init
+```text
+Phone Wi-Fi packets → capture router (passive or AP+CSI ) → LAN cable → paired Pi → Wi-Fi → central MQTT
 ```
 
-- Enter the source folder and clone this repository:
+Each Pi connects to its capture router over Ethernet and to the central server
+over Wi-Fi. Connect the Ethernet cable to a router **LAN port**. Keep the
+router's Ethernet subnet separate from the server Wi-Fi subnet, and leave the
+Pi's default route on Wi-Fi. All capture radios must share the phone AP's channel
+and bandwidth. Give the server and Pis stable Wi-Fi addresses, assign unique
+router/receiver IDs, and add the phone's actual per-network Wi-Fi MAC to the
+receiver allowlists.
 
-```
-cd src && git clone git@github.com:ucsdwcsng/wiros_csi_node.git
-```
+There are two router roles:
 
-- Install the [rf_msgs](https://github.com/ucsdwcsng/rf_msgs) dependency to your source folder (Adds ROS messages for CSI information)
+| Role | Driver and setup | Phone association |
+| --- | --- | --- |
+| Passive capture | `dhd.ko`, `setup.sh` / `configcsi.sh`; monitor mode | Phone connects to another AP on the capture channel |
+| AP+CSI | `dhd-ap-concurrent.ko`, supervised `ap-csi-autostart.sh` | Router also serves the phone's Wi-Fi network |
 
-```
-git clone git@github.com:ucsdwcsng/rf_msgs.git
-```
+The AP+CSI binary targets **BCM4366c0, PHY revision 33, firmware 10.10.122.20,
+Linux 4.1.27**. Confirm model, firmware, SSH access, and persistent `/jffs` before
+installing either driver. These modules are not generic router firmware images.
+Copying them does not install a compatible operating system. Keep an untouched
+OEM driver and working Ethernet management access.
 
-- Build the node
+## Setup
 
-```
-catkin config --install #(optional)
-catkin build (or) catkin_make
-```
+Replace `<...>` values with your deployment settings. Run the Pi commands on each
+paired Pi, using Raspberry Pi OS/Linux with NetworkManager, Python 3, and systemd.
 
-- Remember to add the setup script to your .bashrc:
+### 1. Prepare the Pi and its networks
 
-```
-echo "source ~/wifi_ws/install/setup.bash" >> ~/.bashrc
-```
-
-### Step 3: Installing the Nexmon CSI firmware
-
-- The AP has non-volatile storage mounted at /jffs/ which is where we will install the necessary scripts and binaries, located in nexmon_firmware/csi.
-
-- Copy the needed scripts. The username/password are the same one used to log into the GUI:
-
-```
-scp -r ~/wifi_ws/src/wiros_csi_node/nexmon_firmware/csi USERNAME@ASUS_IP:/jffs/
-```
-
-- Mark them as executable:
-
-```
-sshpass -p PASSWORD ssh USERNAME@IP chmod +x /jffs/csi/*.sh
+```bash
+sudo apt-get update
+sudo apt-get install -y git python3-venv network-manager sshpass
+sudo install -d -o "$USER" -g "$(id -gn)" /opt/wiros_csi_node
+git clone --branch dev https://github.com/WIRES-UB/wiros_csi_node.git /opt/wiros_csi_node
+cd /opt/wiros_csi_node
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
 ```
 
-## Usage Instructions
+Connect the Pi to the same Wi-Fi network as the central server:
 
-On a high level, when you start `csi_node`, it will attempt to log into the AP and set it to monitor mode. Any packets the AP sees will then be sent over ethernet to the node, where they are converted to ROS message format. While the node can be started with `rosrun`, we highly recommend using a roslaunch file due to the number of parameters which need to be set to ensure you get the data that you want.
-
-### Launch
-
-An example launch script is located in the `launch` folder:
-
-```
-launch/basic.launch
+```bash
+nmcli --ask device wifi connect <SERVER_NETWORK_SSID> ifname <WIFI_INTERFACE>
 ```
 
-You should copy this script and modify the parameters to suit your needs.
+Reserve the Pi's Wi-Fi address in that network's DHCP settings. Configure the
+router with a static management address through its web interface, enable LAN
+SSH and persistent JFFS storage, and give the Pi a different address in that
+same capture subnet:
 
-### Parameters
-
-**_login_**
-
-- `asus_ip` : The IP of the asus you want to connect to. If you specify a wildcard for the last byte (i.e. `192.168.43.*`) then the node will scan for the AP on that subnet using nmap.
-- `asus_pwd` : The password to log in to the ASUS.
-
-**_channel params_**
-
-- `channel` : The channel to listen on. Should be set to a control channel. The ASUS can only see packets sent on this channel.
-- `bw` : The bandwidth to listen to (20,40,or 80.) Most traffic in the wild is 20MHz. Listening on 40 or 80MHz, you may occasionally pick up 20MHz transmissions which will fill the corresponding subcarriers, the others will be noise. You should select 20MHz if you are listening on a 2.4GHz channel.
-
-To familiarize yourself with which channels are valid to listen on, we recommend checking out [this list](<https://en.wikipedia.org/wiki/List_of_WLAN_channels#5_GHz_(802.11a/h/j/n/ac/ax)>), or the corresponding 2.4GHz section above.
-For example, to listen on channel 155 (80MHz centered at 5.775 GHz), you would set bw to 80 and channel to either 149, 153, 157 or 141 (The control channels which expand to channel 155).
-
-**_packet params_**
-
-- `mac_filter` : Wi-Fi frames whose MAC addresses do not start with these bytes will be ignored.
-  The list can be 0-6 bytes. The first two bytes are filtered for in hardware on the asus to reduce traffic between the bcm4366c0 wifi card and the asus's kernel. The other bytes are filtered in software on the node. For example, if you want to only listen to CSI from `12:34:56:78:9b`, you would set this as your MAC filter. If you wanted to listen to the devices `11:11:11:00:00:00` and `11:11:11:22:22:22`, you would set the filter to `"11:11:11:*:*:*"`
-
-- `beacon_rate` : If nonzero, the asus will transmit a beacon packet every `beacon_rate` milliseconds. The packet's MAC address will be `11:11:11:a:b:x`, where a and b are the first two bytes of the computer running ROS's hostname, and x is the last byte of their ethernet IP.
-
-- `beacon_tx_nss` : How many transmiter antennas to beacon with. Maximum of 3 for 2.4GHz channels and 4 for 5GHz channels.
-
-**_setup params_**
-
-- `tcp_forward` : Forward the packets over TCP instead of directly bridging over ethernet. By default, the bcm4366c0 sends CSI data to the linux kernel running on the AP via udp broadcast packets. We forward these packets to the host PC using an ethernet bridge. However, we have seen that some systems are not able to see UDP broadcast packets. Setting `tcp_forward` will create a separate tcp connection between the AP and the ROS node, and the udp packets will be sent to the node from the AP via tcpdump->netcat. This is a little slower and requires more overhead processes on the router, so it is not used by default for systems that can see the udp broadcast.
-- `lock_topic` : The asus will listen to any [access_points messages](https://github.com/ucsdwcsng/rf_msgs/blob/main/msg/AccessPoints.msg) published on this topic and lock onto the first AP in each message. This is used with the ap_scanner node (see [below](#real-time-channel-switching)) to lock onto the strongest AP nearby.
-
-- `no_config` : Don't configure the asus router to collect CSI, just start the node. Just for debugging.
-
-### Using the Data
-
-The `csi_node` publishes `WiFi` message data on the `/csi` topic. More information about the messages is [here](https://github.com/ucsdwcsng/rf_msgs).
-Additionally, we have made scripts available to convert rosbags containing CSI info to .npz or .mat files for
-convenient post-processing [here](https://github.com/ucsdwcsng/ros_bearing_sensor).
-This repo also contains functionality such as processing the CSI data in real time to give real-time angle of arrival, angle of departure, and calculation of calibration values.
-
-## Real-Time channel switching
-
-### Via ROS Services
-
-You can switch the channel/bandwidth/MAC filter on the fly by calling the service `csi_node/configure_csi`. It can be done either from the command line (type `rosservice call /csi_node/configure_csi` and triple-tab to get the command line format suggested) or programatically via the rosservice API.
-
-### Automatic
-
-If you are deploying the node on a mobile platform it may be useful to programatically switch channels to gather information about a large number of devices in the environment. We have provided an additional node, `ap_scanner`, which uses your computer's WiFi card to intermittently scan for APs and publishes an [`AccessPoints`](https://github.com/ucsdwcsng/rf_msgs/blob/main/msg/AccessPoints.msg) message sorted by signal strength. The `csi_node` can be configured to try to listen to the strongest AP via the `lock_topic` argument. This will interrupt your device's wifi connectivity. You can also publish your own `AccessPoints` messages to switch channels.
-
-```
-rosrun wiros_csi_node ap_scanner _iface:=INTERFACE _period:=SCANPERIOD _topic:=PUBLISHTOPIC
+```bash
+sudo sh deploy/configure-pi-ethernet.sh <PI_ETHERNET_IP/PREFIX>
+ip -4 address show eth0
+ip route
+ping -I eth0 -c 3 <ROUTER_ETHERNET_IP>
+ssh <ROUTER_USER>@<ROUTER_ETHERNET_IP> 'uname -a; test -d /jffs'
 ```
 
-## Debugging
+The helper uses `eth0` and creates/updates `wiros-router` with
+`ipv4.never-default=yes`. For another Ethernet interface, create the equivalent
+NetworkManager profile with that interface. Do not add a gateway to the capture
+link. Physically isolated pairs may reuse a subnet; bridged links may not.
+Older router SSH servers may require `-o HostkeyAlgorithms=+ssh-rsa`.
 
-To print more verbose info about what data the node is receiving, build in debug mode:
+### 2. Install router assets and choose its role
 
-```
-catkin build --cmake-args -DCMAKE_BUILD_TYPE=DEBUG
-```
+From the Pi, set shell variables used in the remaining commands:
 
-Here is a short description of how the node works for debug purposes.
-
-1. The node optionally calls nmap to search the ethernet subnet for a responsive address. This means you to connect any device running the node to any ASUS, as there isn't any hard-coded association between them.
-
-2. Once the node has found the ASUS, it will attempt to SSH into it with the provided password. It will run the `setup.sh` script. `setup.sh` checks to see if the device already has the firmware loaded, and will reload the firmware if necessary. It will then call `makecsiparams` to create a struct containing info about what CSI you want to collect and pass it to `nexutil`, which will configure the firmware to start receiving CSI.
-
-3. Once the ASUS is configured, it will start seeing UDP packets addressed to 255.255.255.255 containing CSI data. If you don't have `tcp_forward` flag enabled in the launch file, the packets will be bridged to the ethernet interface and the node will receive them. If you do, the node will start a background process on the ASUS that runs `tcpdump` to hear the UDP packets and will use netcat to pipe them back to the node.
-
-4. Once the node has started receiving CSI packets, it will decode them and publish them as ros messages in the `/csi` topic.
-
-The node will publish AP lists for 2.4 and 5 GHz on `PUBLISHTOPIC_2` and `PUBLISHTOPIC_5` respectively, and the csi node can be configured via the `lock_topic` param to automatically subscribe to these topics and change channel when a new message is received.
-
-### Direct packet injection
-
-For debugging purposes or to inject arbitrary packets, you must SSH into the asus itself, configure it, and then run a script that calls `nexutil` to inject the packets.
-
-```
-ssh {...}
-
-cd /jffs/csi
-./reload.sh
-./configcsi.sh {channel} {bandwidth} 4 #channel, bandwidth, number of rx-cores
-
-./send.sh {bw} {nss} {packet period in usec} {MAC address in hex, separated by space} #or an equivalent script
+```bash
+export ROUTER_HOST='<ROUTER_ETHERNET_IP>'
+export ROUTER_USER='<ROUTER_SSH_USER>'
+export CHANNEL='<PRIMARY_CHANNEL>'
+export BANDWIDTH='<20_40_OR_80>'
 ```
 
-see send.sh for examples. Essentially, you give the raw wifi frame in bytes(including frame ctl, sequence number, and everything,) and the asus will transmit the frame when it becomes available. Do not change the first four bytes injected as they inform nexutil about how to transmit the packet. The example packet in send.sh starts with the byte 0x88. You can modify send.sh however you want and copy the new files onto the asus to inject different packets.
+On a router still running its stock driver, back up `/jffs/csi` if it exists and
+copy the assets. Avoid overwriting a driver file that is currently loaded through
+a bind mount; stop its supervisor and return to stock first when upgrading.
 
-## Citations
+```bash
+ssh "$ROUTER_USER@$ROUTER_HOST" \
+  'test ! -d /jffs/csi || cp -a /jffs/csi "/jffs/csi.backup-$(date +%Y%m%d-%H%M%S)"'
+scp -O -r nexmon_firmware/csi "$ROUTER_USER@$ROUTER_HOST:/jffs/"
+ssh "$ROUTER_USER@$ROUTER_HOST" 'chmod u+x /jffs/csi/*.sh /jffs/csi/nexutil /jffs/csi/makecsiparams'
+```
 
-Reminder that if you use this software, you must cite nexmon:
+**Passive router:** run the following once after each stock boot. It loads the
+passive driver, configures the radio, and forwards CSI broadcasts over Ethernet.
+The final argument keeps capacity for four transmit streams; the receiver uses
+four receive chains by default.
 
-@electronic{nexmon:project,
-author = {Schulz, Matthias and Wegemer, Daniel and Hollick, Matthias},
-title = {Nexmon: The C-based Firmware Patching Framework},
-url = {https://nexmon.org},
-year = {2017}
+```bash
+ssh "$ROUTER_USER@$ROUTER_HOST" \
+  "/jffs/csi/setup.sh $CHANNEL $BANDWIDTH 4"
+```
+
+`setup.sh`/`reload.sh`/`configcsi.sh` are for passive routers: they bring down the
+capture radio's AP service. For automatic passive initialization, the receiver's
+`--configure-router` option runs this same setup and requires `ROUTER_PASSWORD`
+and `sshpass`. The supplied receiver service only receives; it does not configure
+the router on startup.
+
+**AP+CSI router:** configure the desired SSID, fixed primary channel, and width
+in the stock web interface, then follow [AP+CSI startup](#apcsi-startup). Do not
+run the passive setup command or `--configure-router` on this router.
+
+### 3. Configure the Python receiver
+
+Create `src/pythonNoRos/config.json` on each Pi; this file is intentionally
+untracked. Replace every placeholder and choose the channel/width used above
+(the numeric values below are examples):
+
+```json
+{
+  "router": {
+    "id": "<UNIQUE_ROUTER_ID>",
+    "host": "<ROUTER_ETHERNET_IP>",
+    "username": "<ROUTER_SSH_USER>",
+    "password": ""
+  },
+  "receiver": {
+    "id": "<UNIQUE_RECEIVER_ID>",
+    "bind": "0.0.0.0",
+    "port": 5500,
+    "receive_buffer_bytes": 4194304
+  },
+  "capture": {
+    "channel": 36,
+    "bandwidth_mhz": 80,
+    "tx_streams": 4,
+    "rx_cores": 4,
+    "mac_filters": ["<PHONE_WIFI_MAC>"]
+  },
+  "mqtt": {
+    "host": "<CENTRAL_SERVER_HOST>",
+    "port": 1883,
+    "topic": "/csi",
+    "qos": 0
+  }
 }
+```
 
-@inproceedings{10.1145/3349623.3355477,
-author = {Gringoli, Francesco and Schulz, Matthias and Link, Jakob and Hollick, Matthias},
-title = {Free Your CSI: A Channel State Information Extraction Platform For Modern Wi-Fi Chipsets},
-year = {2019},
-url = {https://doi.org/10.1145/3349623.3355477},
-booktitle = {Proceedings of the 13th International Workshop on Wireless Network Testbeds, Experimental Evaluation & Characterization},
-pages = {21–28},
-series = {WiNTECH ’19}
-}
+Add all collection phones to `mac_filters`, using complete colon-separated
+addresses. Record the MAC actually used on the phone AP; per-network randomized
+addresses can differ from the phone's hardware address. For AP+CSI only, also set
+`capture.require_coherent_snapshot` to `true`. Keep `tx_streams` and `rx_cores`
+at four for the packaged AP driver.
+Set Server-central's `CSI_ROUTER_IDS` to the exact set of `router.id` values.
+
+Start the central broker, then run the receiver in the foreground:
+
+```bash
+.venv/bin/python src/pythonNoRos/nexcsiserver.py --config src/pythonNoRos/config.json
+```
+
+Generate traffic from an allowed phone. Logs should show incoming datagrams and
+completed matrices. If needed, allow UDP
+5500 on the Pi's Ethernet interface. Stop the foreground receiver before
+installing the service so two processes do not compete for packets.
+
+```bash
+sudo install -m 0644 deploy/wiros-csi-node.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now wiros-csi-node.service
+journalctl -u wiros-csi-node.service -n 50 --no-pager
+```
+
+### AP+CSI startup
+
+The router must **boot the untouched OEM driver first**. The Pi supervisor performs the late switch after
+stock AP startup. The installer verifies driver hashes and the existing AP/channel
+before unloading anything. It does not change the SSID, channel, or NVRAM.
+
+On the stock router, create `/jffs/csi/ap-csi.env` with:
+
+```sh
+AP_CSI_INTERFACE=eth6
+AP_CSI_SSID='<PHONE_AP_SSID>'
+AP_CSI_CHANNEL=<PRIMARY_CHANNEL>
+AP_CSI_BANDWIDTH_MHZ=<CHANNEL_WIDTH>
+AP_CSI_TX_STREAMS=4
+AP_CSI_RX_CORES=4
+AP_CSI_MIN_INTERVAL_MS=1
+AP_CSI_TARGET_MAC='<PHONE_WIFI_MAC>'
+AP_CSI_EXPECTED_STOCK_MD5=<VERIFIED_COMPATIBLE_OEM_MODULE_MD5>
+AP_CSI_EXPECTED_CANDIDATE_MD5=<VERIFIED_CANDIDATE_MODULE_MD5>
+```
+
+`AP_CSI_TARGET_MAC` accepts up to four comma-separated full addresses; keep it
+consistent with the Pi allowlist. The fixed 1 ms interval controls export of the
+saved matrix, not a promise of 1,000 complete captures per second. Verify file
+hashes using `md5sum` and `sha256sum`; investigate compatibility mismatches rather
+than accepting an unknown module. The packaged AP driver's SHA-256 is
+`9a08f5f8f2d4ca83dca178f222af1f4ae4c529a715697639dfd0e661fd7651d2`.
+
+On the paired Pi, store the router password outside the repository:
+
+```bash
+install -d -m 0700 "$HOME/.config/wiros" "$HOME/.ssh"
+read -rsp 'Router SSH password: ' ROUTER_PASSWORD; echo
+printf '%s\n' "$ROUTER_PASSWORD" > "$HOME/.config/wiros/ap_csi_router_password"
+chmod 0600 "$HOME/.config/wiros/ap_csi_router_password"
+unset ROUTER_PASSWORD
+sudo install -m 0755 nexmon_firmware/csi/ap-csi-rpi-watchdog.sh /usr/local/sbin/ap-csi-rpi-watchdog
+sudo install -m 0644 nexmon_firmware/csi/ap-csi-rpi-watchdog.service /etc/systemd/system/
+```
+
+Create `/etc/default/ap-csi-rpi-watchdog` with literal absolute paths (systemd
+will not expand `$HOME` in this file):
+
+```sh
+AP_CSI_ROUTER_HOST=<ROUTER_ETHERNET_IP>
+AP_CSI_SOURCE_IP=<PI_ETHERNET_IP>
+AP_CSI_LINK_INTERFACE=eth0
+AP_CSI_ROUTER_USER=<ROUTER_SSH_USER>
+AP_CSI_RADIO_INTERFACE=eth6
+AP_CSI_PASSWORD_FILE=/home/<PI_USER>/.config/wiros/ap_csi_router_password
+AP_CSI_KNOWN_HOSTS=/home/<PI_USER>/.ssh/ap_csi_router_known_hosts
+AP_CSI_DISABLE_FILE=/home/<PI_USER>/.config/wiros/ap_csi_disabled
+AP_CSI_INFLIGHT_FILE=/home/<PI_USER>/.config/wiros/ap_csi_install_inflight
+```
+
+## Operation and troubleshooting
+
+The AP firmware copies active estimates into a protected RAM snapshot, then
+exports rows without holding the radio across timer callbacks. At 80 MHz the
+matrix retains `4 × 4 × 256` capacity. Unused antenna combinations and frequency
+bins are exact zero. The receiver validates capture identity, rejects conflicting
+or incomplete row sets, decodes signed coefficients, centers subcarriers, and
+publishes flattened real/imaginary arrays in transmit/receive/subcarrier order.
+Metadata distinguishes measured streams from capacity. Heavy traffic can reduce
+accepted capture rate; overwritten estimates are discarded rather than combined.
+
+Check the path in order:
+
+```bash
+ip route
+ping -I eth0 -c 3 "$ROUTER_HOST"
+systemctl status wiros-csi-node.service --no-pager
+journalctl -u wiros-csi-node.service -n 50 --no-pager
+sudo ss -ulnp | grep ':5500'
+```
+
+- **No datagrams:** check the LAN cable, Ethernet address, driver setup, bridge,
+  channel, and UDP firewall. Passive setup must run again after a router reboot.
+- **Datagrams but no matrices:** check the phone MAC and configured stream/core
+  counts. For AP+CSI, verify snapshot mode and both firmware/Pi MAC filters.
+- **Matrices but no stored phone samples:** check the central broker address,
+  server router-ID list, and phone MQTT path. An isolated phone LAN needs the Pi
+  MQTT bridge documented in Server-central; the receiver itself is not a broker.
+- **Disabled AP supervisor:** inspect its journal and persistent latch before
+  retrying. Keep management on Ethernet during recovery.
+
+## Rebuild the AP driver
+
+The compiled driver is included. To rebuild, use Linux x86-64 and the pinned
+Nexmon and Nexmon CSI checkouts. On Debian/Ubuntu, first install `git`, `make`,
+`gcc`, `g++-multilib`, `gawk`, `flex`, `bison`, `qpdf`, `python3`, `patch`, and
+`zlib1g-dev`. Enable i386 packages with `sudo dpkg --add-architecture i386`, run
+`sudo apt-get update`, and install `libc6:i386` and `libstdc++6:i386` for the
+bundled 32-bit compiler. Then build the tools and driver:
+
+```bash
+git clone https://github.com/seemoo-lab/nexmon.git /path/to/nexmon
+git -C /path/to/nexmon checkout 68720406f54ff16cad28fd3c51f2392aefad9fb7
+git clone https://github.com/seemoo-lab/nexmon_csi.git /path/to/nexmon_csi
+git -C /path/to/nexmon_csi checkout 1232edf2cf1e7ae0561676c49e4dd4eb22c8a27e
+make -C /path/to/nexmon/buildtools/gcc-nexmon-plugin
+make -C /path/to/nexmon/buildtools/b43-v2/assembler
+make -C /path/to/nexmon/buildtools/b43-v2/disassembler
+make -C /path/to/nexmon/buildtools/flash_patch_extractor
+make -C /path/to/nexmon/buildtools/ucode_extractor
+nexmon_firmware/csi/build.sh /path/to/nexmon /path/to/nexmon_csi /tmp/dhd-ap-concurrent.ko
+```
+
+The build script works in an isolated build directory and prints the artifact
+hash; it never installs firmware.
+Do not run upstream `install-firmware` targets on a deployment host.
+
+## Attribution
+
+This repository derives from [WiROS](https://github.com/ucsdwcsng/WiROS) and
+[Nexmon CSI](https://github.com/seemoo-lab/nexmon_csi). Retain their licenses and
+cite Nexmon and the CSI extractor when using this work in research:
+
+- Matthias Schulz, Daniel Wegemer, and Matthias Hollick. *Nexmon: The C-based
+  Firmware Patching Framework* (2017), [nexmon.org](https://nexmon.org).
+- Francesco Gringoli, Matthias Schulz, Jakob Link, and Matthias Hollick.
+  *Free Your CSI: A Channel State Information Extraction Platform For Modern
+  Wi-Fi Chipsets*, WiNTECH 2019, [DOI: 10.1145/3349623.3355477](https://doi.org/10.1145/3349623.3355477).
