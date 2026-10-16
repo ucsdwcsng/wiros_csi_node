@@ -49,6 +49,30 @@ class PublishMatrixTest(unittest.TestCase):
 
 
 class MatrixShapeTest(unittest.TestCase):
+    def test_matrix_preserves_each_stream_timestamp(self):
+        module = load_module()
+        streams = {}
+        for tx in range(2):
+            for rx in range(2):
+                streams[(tx, rx)] = {
+                    "n_subcarriers": 4,
+                    "timestamp_ns": 1_000_000_000 + tx * 10 + rx,
+                    "csi_r": [float(tx * 10 + rx)] * 4,
+                    "csi_i": [float(-(tx * 10 + rx))] * 4,
+                }
+
+        matrix = module.assemble_csi_matrix(streams, n_tx=2, n_rx=2)
+
+        self.assertEqual(
+            [
+                {"tx": 0, "rx": 0, "timestamp_ns": 1_000_000_000},
+                {"tx": 0, "rx": 1, "timestamp_ns": 1_000_000_001},
+                {"tx": 1, "rx": 0, "timestamp_ns": 1_000_000_010},
+                {"tx": 1, "rx": 1, "timestamp_ns": 1_000_000_011},
+            ],
+            matrix["stream_timestamps_ns"],
+        )
+
     def test_incomplete_4x4_stream_set_is_rejected_instead_of_zero_padded(self):
         module = load_module()
         streams = {}

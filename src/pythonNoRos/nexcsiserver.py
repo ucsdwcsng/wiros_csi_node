@@ -92,6 +92,18 @@ def assemble_csi_matrix(streams, n_tx, n_rx):
             "n_tx": n_tx,
             "n_rx": n_rx,
             "layout": "tx,rx,subcarrier",
+            # Each matrix is assembled from separately received Nexmon UDP
+            # streams. Preserve their individual receiver timestamps for
+            # packet- and stream-level timing analysis downstream.
+            "stream_timestamps_ns": [
+                {
+                    "tx": tx,
+                    "rx": rx,
+                    "timestamp_ns": int(streams[(tx, rx)]["timestamp_ns"]),
+                }
+                for tx in range(n_tx)
+                for rx in range(n_rx)
+            ],
             "csi_r": csi_r,
             "csi_i": csi_i,
         }
