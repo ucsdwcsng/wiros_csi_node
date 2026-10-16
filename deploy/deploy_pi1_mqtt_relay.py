@@ -14,6 +14,7 @@ LOCAL_CONFIG = ROOT / "mosquitto-pi1-relay.conf"
 PI_USER = "wiloc"
 REMOTE_CONFIG = "/etc/mosquitto/conf.d/wiros-relay.conf"
 REMOTE_OVERRIDE = "/etc/systemd/system/mosquitto.service.d/wiros.conf"
+REMOTE_CSI_CONFIG = "/opt/wiros_csi_node/src/pythonNoRos/config.json"
 PASSWORD = os.environ["WIRES_PI_PASSWORD"]
 
 
@@ -33,10 +34,11 @@ def run(client, command, sudo=False, check=True):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default="192.168.48.20")
+    parser.add_argument("--port", type=int, default=22)
     args = parser.parse_args()
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(args.host, username=PI_USER, password=PASSWORD, timeout=10)
+    client.connect(args.host, port=args.port, username=PI_USER, password=PASSWORD, timeout=10)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     temporary = f"/home/{PI_USER}/wiros-relay.conf.new-{stamp}"
     backup = f"{REMOTE_CONFIG}.bak-{stamp}"
@@ -59,7 +61,6 @@ def main():
             sudo=True,
         )
         run(client, "sudo -S systemctl daemon-reload", sudo=True)
-        run(client, "sudo -S systemctl disable --now wiros-csi-rpi1.service", sudo=True, check=False)
         run(client, "sudo -S systemctl enable mosquitto", sudo=True)
         status, output, error = run(
             client, "sudo -S systemctl restart mosquitto", sudo=True, check=False
@@ -71,6 +72,14 @@ def main():
                 run(client, f"sudo -S rm -f {REMOTE_CONFIG}", sudo=True)
             run(client, "sudo -S systemctl restart mosquitto", sudo=True)
             raise RuntimeError(f"Mosquitto restart failed; restored prior config\n{output}{error}")
+        # The local CSI collector and the bridge must target the same central broker.
+        run(
+            client,
+            f"sudo -S sed -i 's/192\\.168\\.50\\.20/192.168.50.1/g' {REMOTE_CSI_CONFIG}",
+            sudo=True,
+        )
+        run(client, "sudo -S systemctl enable wiros-csi-rpi1.service", sudo=True)
+        run(client, "sudo -S systemctl restart wiros-csi-rpi1.service", sudo=True)
         state = run(client, "systemctl is-active mosquitto")[1]
         listener = run(client, "ss -ltn | grep '192.168.48.20:1883'")[1]
         print(f"mosquitto={state}")
